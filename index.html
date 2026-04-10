@@ -277,9 +277,26 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
         <div class="chip" data-start="10000">$10000</div>
       </div>
     </div>
-    <div style="margin-top:.5rem;text-align:center">
+        <div style="margin-top:.5rem;text-align:center">
       <span id="selected-start" style="color:var(--gold);font-weight:bold">$1000</span>
     </div>
+    
+    <!-- MODO DE JUEGO - AGREGAR AQUÍ -->
+    <div><label style="margin-top:0.8rem;display:block">🎮 Modo de juego</label>
+      <div style="display:flex;gap:1rem;margin-top:.5rem;justify-content:center">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+          <input type="radio" name="gameMode" value="casino" checked> 🎰 Casino (vs Dealer)
+        </label>
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+          <input type="radio" name="gameMode" value="tournament"> 🏆 Torneo (Jugadores vs Jugadores)
+        </label>
+      </div>
+      <div id="mode-info" style="font-size:.7rem;color:var(--cream2);margin-top:.5rem;text-align:center">
+        Modo Casino: Ganas si superas al dealer
+      </div>
+    </div>
+    <!-- FIN MODO DE JUEGO -->
+    
     <button class="btn-gold" id="join-btn" style="margin-top:.8rem">Entrar a la Mesa</button>
     <div id="lobby-err"></div>
   </div>
@@ -292,7 +309,8 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <div id="my-balance">Fichas: <span id="bal-val">0</span></div>
   </header>
 
-  <div id="phase-banner">Esperando jugadores…</div>
+    <div id="mode-banner" style="text-align:center;font-size:.75rem;color:var(--gold);margin-bottom:.3rem"></div>
+    <div id="phase-banner">Esperando jugadores…</div>
 
   <!-- Dealer -->
   <div class="felt">
@@ -525,6 +543,11 @@ const STATUS_CLASS = {
 function render(s) {
   if (!s) return;
   document.getElementById('phase-banner').textContent = PHASES[s.phase] || s.phase;
+  // Mostrar modo de juego
+  const modeBanner = document.getElementById('mode-banner');
+  if (modeBanner && s.gameMode) {
+    modeBanner.textContent = s.gameMode === 'casino' ? '🎰 Modo Casino: Gana contra el dealer' : '🏆 Modo Torneo: Compite contra otros jugadores';
+  }
 
   const me = s.players[myId];
   if (me) document.getElementById('bal-val').textContent = me.balance;
@@ -762,6 +785,19 @@ document.querySelectorAll('#start-chips .chip').forEach(chip => {
 });
 document.querySelector('#start-chips .chip[data-start="1000"]').style.opacity = '1';
 
+// Info de modos
+const modeInfo = {
+  casino: '🎰 Modo Casino: Ganas si tu mano supera al dealer. El dealer paga las ganancias.',
+  tournament: '🏆 Modo Torneo: Compites contra otros jugadores. El que tiene mejor mano gana las apuestas de los perdedores. ¡El dealer solo reparte!'
+};
+
+document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    const infoDiv = document.getElementById('mode-info');
+    if (infoDiv) infoDiv.textContent = modeInfo[e.target.value];
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  RECOMPRA UI
 // ═══════════════════════════════════════════════════════════════
@@ -836,10 +872,10 @@ function handleVoteRequest(data) {
 // ═══════════════════════════════════════════════════════════════
 //  WEBSOCKET
 // ═══════════════════════════════════════════════════════════════
-function connect(name, startAmount) {
+function connect(name, startAmount, gameMode) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = () => { ws.send(JSON.stringify({type:'join', name, startAmount})); };
+  ws.onopen = () => { ws.send(JSON.stringify({type:'join', name, startAmount, gameMode})); };
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'joined') {
@@ -877,9 +913,10 @@ function connect(name, startAmount) {
 function tryJoin() {
   const name = document.getElementById('name-in').value.trim();
   if (!name) { document.getElementById('lobby-err').textContent = 'Escribe tu nombre'; return; }
+  const gameMode = document.querySelector('input[name="gameMode"]:checked').value;
   document.getElementById('join-btn').disabled = true;
   document.getElementById('lobby-err').textContent = '';
-  connect(name, selectedStartAmount);
+  connect(name, selectedStartAmount, gameMode);
 }
 
 document.getElementById('join-btn')?.addEventListener('click', tryJoin);
