@@ -60,6 +60,9 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   border-radius:20px;padding:1.2rem;
   box-shadow:inset 0 0 60px rgba(0,0,0,.4),var(--shadow);
   border:3px solid var(--gold3);margin-bottom:.9rem}
+.dealer-zone{text-align:center;margin-bottom:.6rem}
+.zone-lbl{font-size:.65rem;letter-spacing:.25em;color:var(--gold);opacity:.7;text-transform:uppercase;margin-bottom:.4rem}
+#dealer-val{font-size:.72rem;color:var(--gold2);margin-top:.35rem;min-height:1em}
 .hand{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;min-height:82px}
 .card{width:58px;height:82px;border-radius:7px;background:var(--card);
   border:1px solid #c8c0b0;box-shadow:2px 3px 10px rgba(0,0,0,.5);
@@ -72,9 +75,6 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 .card.back::after{content:'🂠';font-size:2.2rem;color:rgba(255,255,255,.12)}
 .card .cr{font-size:.95rem;line-height:1}.card .cs{font-size:.8rem;line-height:1}
 .card.sm{width:44px;height:62px}.card.sm .cr{font-size:.75rem}.card.sm .cs{font-size:.62rem}
-.dealer-zone{text-align:center;margin-bottom:.6rem}
-.zone-lbl{font-size:.65rem;letter-spacing:.25em;color:var(--gold);opacity:.7;text-transform:uppercase;margin-bottom:.4rem}
-#dealer-val{font-size:.72rem;color:var(--gold2);margin-top:.35rem;min-height:1em}
 #players-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
   gap:.8rem;margin-bottom:.8rem}
 .player-card{background:rgba(0,0,0,.35);border:1px solid rgba(201,168,76,.2);
@@ -127,11 +127,11 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   border:3px dashed rgba(255,255,255,.22);box-shadow:0 3px 10px rgba(0,0,0,.45),inset 0 2px 4px rgba(255,255,255,.15);
   transition:transform .14s;color:#fff;user-select:none;flex-shrink:0}
 .chip:hover{transform:scale(1.12) translateY(-2px)}.chip:active{transform:scale(.93)}
-.chip[data-v="5"]{background:radial-gradient(circle,#e74c3c,#c0392b)}
-.chip[data-v="10"]{background:radial-gradient(circle,#2980b9,#1a5276)}
-.chip[data-v="25"]{background:radial-gradient(circle,#27ae60,#1e6b43)}
-.chip[data-v="50"]{background:radial-gradient(circle,#8e44ad,#6c3483)}
-.chip[data-v="100"]{background:radial-gradient(circle,#e67e22,#ba6010)}
+.chip[data-v="50"]{background:radial-gradient(circle,#e74c3c,#c0392b)}
+.chip[data-v="100"]{background:radial-gradient(circle,#2980b9,#1a5276)}
+.chip[data-v="250"]{background:radial-gradient(circle,#27ae60,#1e6b43)}
+.chip[data-v="500"]{background:radial-gradient(circle,#8e44ad,#6c3483)}
+.chip[data-v="1000"]{background:radial-gradient(circle,#e67e22,#ba6010)}
 .chip.sm{width:40px;height:40px;font-size:.62rem}
 .bet-row{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
 .bet-amt{font-size:1.4rem;color:var(--gold);font-weight:700;min-width:50px;text-align:center}
@@ -205,10 +205,11 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.25);border-radius:2px}
-#rebuy-modal{position:fixed;inset:0;z-index:450;display:none;background:rgba(0,0,0,.85);align-items:center;justify-content:center}
-#rebuy-modal.open{display:flex}
-#rebuy-panel{background:linear-gradient(180deg,#0a1e0d,#071208);border:2px solid var(--gold3);border-radius:16px;padding:1.5rem;width:min(400px,90%);text-align:center;box-shadow:var(--shadow)}
-#rebuy-panel h3{font-family:'Cinzel Decorative',cursive;color:var(--gold);margin-bottom:.5rem}
+#rebuy-modal, #vote-modal{position:fixed;inset:0;z-index:450;display:none;background:rgba(0,0,0,.85);align-items:center;justify-content:center}
+#rebuy-modal.open, #vote-modal.open{display:flex}
+#rebuy-panel, #vote-panel{background:linear-gradient(180deg,#0a1e0d,#071208);border:2px solid var(--gold3);border-radius:16px;padding:1.5rem;width:min(400px,90%);text-align:center;box-shadow:var(--shadow)}
+#rebuy-panel h3, #vote-panel h3{font-family:'Cinzel Decorative',cursive;color:var(--gold);margin-bottom:.5rem}
+#pot-display{font-size:.9rem;color:var(--gold);text-align:center;margin-bottom:.5rem;font-weight:bold}
 </style>
 </head>
 <body>
@@ -254,12 +255,17 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 <div id="table">
   <header class="bar">
     <div class="logo">♠ Blackjack</div>
-    <div id="my-balance">Fichas: <span id="bal-val">0</span></div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <div id="my-balance">Fichas: <span id="bal-val">0</span></div>
+      <button id="exit-btn" class="btn-sm" style="background: rgba(0,0,0,0.4);">🚪 Salir</button>
+    </div>
   </header>
   <div id="mode-banner"></div>
   <div id="phase-banner">Esperando jugadores…</div>
+  <div id="pot-display" style="display:none"></div>
 
-  <div class="felt">
+  <!-- Dealer (visible solo en modo casino) -->
+  <div class="felt" id="dealer-felt" style="display:none">
     <div class="dealer-zone">
       <div class="zone-lbl">— Dealer —</div>
       <div class="hand" id="dealer-hand"></div>
@@ -267,8 +273,10 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     </div>
   </div>
 
+  <!-- Jugadores -->
   <div id="players-grid"></div>
 
+  <!-- Seguro (solo casino) -->
   <div id="insurance-zone">
     <h3>🛡️ El Dealer muestra una carta fuerte</h3>
     <p id="ins-text">¿Deseas tomar un seguro contra Blackjack del dealer?</p>
@@ -279,15 +287,16 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <div id="ins-waiting"></div>
   </div>
 
+  <!-- Apuestas -->
   <div id="betting-zone">
     <div>
-      <div class="bet-section-title">Apuesta Principal</div>
+      <div class="bet-section-title">Apuesta Principal (mínimo 50)</div>
       <div class="chips" id="main-chips">
-        <div class="chip" data-v="5" data-t="main">$5</div>
-        <div class="chip" data-v="10" data-t="main">$10</div>
-        <div class="chip" data-v="25" data-t="main">$25</div>
         <div class="chip" data-v="50" data-t="main">$50</div>
         <div class="chip" data-v="100" data-t="main">$100</div>
+        <div class="chip" data-v="250" data-t="main">$250</div>
+        <div class="chip" data-v="500" data-t="main">$500</div>
+        <div class="chip" data-v="1000" data-t="main">$1000</div>
       </div>
       <div class="bet-row" style="margin-top:.6rem">
         <button class="btn-sm" id="clear-main">✕</button>
@@ -310,7 +319,8 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
           <div class="bet-amt sm" id="pp-amt">$0</div>
         </div>
       </div>
-      <div>
+      <!-- 21+3 se elimina en torneo, pero se oculta desde el frontend según modo -->
+      <div id="sidebet-21-3" style="margin-bottom:.7rem">
         <div style="font-size:.68rem;color:var(--cream2);margin-bottom:.4rem">🎲 <strong style="color:var(--gold)">21+3</strong> — ¿Tus 2 cartas + carta del dealer forman mano de poker?</div>
         <div class="chips">
           <div class="chip sm" data-v="5" data-t="s21">$5</div>
@@ -327,6 +337,7 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <div id="waiting-txt"></div>
   </div>
 
+  <!-- Acciones -->
   <div id="actions">
     <button class="btn-act btn-hit" id="btn-hit">Pedir</button>
     <button class="btn-act btn-stand" id="btn-stand">Plantarse</button>
@@ -335,6 +346,7 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <button class="btn-act btn-surr" id="btn-surr">Rendirse</button>
   </div>
 
+  <!-- Chat -->
   <div id="chat-box">
     <div id="chat-log"></div>
     <div class="chat-inp">
@@ -362,10 +374,25 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
       <span id="rebuy-amount-display" style="color:var(--gold);font-weight:bold">$0</span>
     </div>
     <div class="ins-btns" style="margin-top:.5rem">
-      <button class="btn-gold" id="rebuy-confirm">Comprar</button>
+      <button class="btn-gold" id="rebuy-confirm">Solicitar Recompra</button>
       <button class="btn-sm" id="rebuy-cancel">Cancelar</button>
     </div>
     <div id="rebuy-err" style="color:#e74c3c;font-size:.75rem;margin-top:.5rem"></div>
+  </div>
+</div>
+
+<!-- Modal votación recompra -->
+<div id="vote-modal">
+  <div id="vote-panel">
+    <h3>🗳️ Votación de Recompra</h3>
+    <p id="vote-player-name"></p>
+    <p id="vote-amount" style="color:var(--gold);font-weight:bold"></p>
+    <p style="font-size:.8rem;margin:.5rem 0">¿Apruebas que este jugador compre fichas?</p>
+    <div class="ins-btns">
+      <button class="btn-ins-yes" id="vote-yes">✅ Aprobar</button>
+      <button class="btn-ins-no" id="vote-no">❌ Rechazar</button>
+    </div>
+    <div id="vote-waiting" style="font-size:.75rem;color:var(--cream2);margin-top:.8rem"></div>
   </div>
 </div>
 
@@ -379,7 +406,7 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   <details class="rules-section" open><summary>🎯 Objetivo del Juego</summary><div class="rules-body">Llega a <strong>21 puntos</strong> o acércate lo más posible <em>sin pasarte</em>.</div></details>
   <details class="rules-section"><summary>🃏 Valor de las Cartas</summary><div class="rules-body"><ul><li><strong>2–10:</strong> Valor numérico</li><li><strong>J,Q,K:</strong> 10 puntos</li><li><strong>As:</strong> 11 ó 1</li></ul></div></details>
   <details class="rules-section"><summary>🛡️ Seguro</summary><div class="rules-body">En modo Casino, si el dealer muestra un <strong>As, 10, J, Q o K</strong>, puedes contratar seguro (mitad de tu apuesta). Si el dealer tiene Blackjack, el seguro paga 2:1.</div></details>
-  <details class="rules-section"><summary>🏆 Modo Torneo</summary><div class="rules-body">Los jugadores compiten entre sí. El dealer solo reparte. Las apuestas se acumulan y se reparten: <strong>50% para el 1º, 30% para el 2º, 20% para el 3º</strong> (según la mano más cercana a 21 sin pasarse).</div></details>
+  <details class="rules-section"><summary>🏆 Modo Torneo</summary><div class="rules-body">Los jugadores compiten entre sí. El dealer solo reparte. Las apuestas se acumulan en un pozo y se reparten según el ranking: <strong>1º 50%, 2º 30%, 3º 20%</strong> (ajustado según número de jugadores). Apuesta mínima 50 fichas. Segunda carta inicial oculta hasta el final. Si todos se pasan, el pozo se acumula para la siguiente ronda.</div></details>
 </div>
 </div>
 <div id="toast"></div>
@@ -404,14 +431,17 @@ function handValue(cards) {
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function cardHTML(c, sm = false) {
+function cardHTML(c, sm = false, hiddenForOthers = false, isMine = false) {
+  if (c.hidden && !isMine) return `<div class="card back ${sm?'sm':''}"></div>`;
   if (c.suit === '?') return `<div class="card back ${sm?'sm':''}"></div>`;
   const red = c.suit==='♥'||c.suit==='♦';
   return `<div class="card ${red?'red':'black'} ${sm?'sm':''}">
     <div class="cr">${esc(c.rank)}</div><div class="cs">${esc(c.suit)}</div>
   </div>`;
 }
-function handHTML(cards, sm = false) { return cards.map(c => cardHTML(c, sm)).join(''); }
+function handHTML(cards, sm = false, isMine = false) {
+  return cards.map(c => cardHTML(c, sm, c.hidden, isMine)).join('');
+}
 
 const PHASES = {
   lobby: 'Esperando jugadores…',
@@ -436,18 +466,39 @@ function render(s) {
   if (!s) return;
   document.getElementById('phase-banner').textContent = PHASES[s.phase] || s.phase;
   const modeBanner = document.getElementById('mode-banner');
+  const isTournament = s.gameMode === 'tournament';
   if (modeBanner) {
-    modeBanner.textContent = s.gameMode === 'casino' ? '🎰 Modo Casino: Gana contra el dealer' : '🏆 MODO TORNEO - Jugadores vs Jugadores. El dealer solo reparte.';
-    modeBanner.style.background = s.gameMode === 'tournament' ? 'rgba(201,168,76,.2)' : 'rgba(0,0,0,.3)';
+    modeBanner.textContent = isTournament ? '🏆 MODO TORNEO - Jugadores vs Jugadores | Apuesta mínima 50 | Segunda carta oculta' : '🎰 Modo Casino: Gana contra el dealer';
+    modeBanner.style.background = isTournament ? 'rgba(201,168,76,.2)' : 'rgba(0,0,0,.3)';
+  }
+  // Mostrar/ocultar dealer y pozo
+  const dealerFelt = document.getElementById('dealer-felt');
+  const potDisplay = document.getElementById('pot-display');
+  if (isTournament) {
+    dealerFelt.style.display = 'none';
+    potDisplay.style.display = 'block';
+    if (s.potTotal !== undefined) potDisplay.textContent = `💰 POZO ACUMULADO: $${s.potTotal}`;
+    // Ocultar apuesta 21+3
+    document.getElementById('sidebet-21-3').style.display = 'none';
+  } else {
+    dealerFelt.style.display = 'block';
+    potDisplay.style.display = 'none';
+    document.getElementById('sidebet-21-3').style.display = 'block';
   }
 
   const me = s.players[myId];
   if (me) document.getElementById('bal-val').textContent = me.balance;
 
+  // Dealer (solo casino)
   const dh = document.getElementById('dealer-hand');
-  dh.innerHTML = handHTML(s.dealer.hand);
   const dv = document.getElementById('dealer-val');
-  dv.textContent = s.dealer.value != null ? `Valor: ${s.dealer.value}` : '';
+  if (!isTournament) {
+    dh.innerHTML = handHTML(s.dealer.hand);
+    dv.textContent = s.dealer.value != null ? `Valor: ${s.dealer.value}` : '';
+  } else {
+    dh.innerHTML = '';
+    dv.textContent = '';
+  }
 
   const grid = document.getElementById('players-grid');
   grid.innerHTML = '';
@@ -459,8 +510,10 @@ function render(s) {
     const el = document.createElement('div');
     el.className = `player-card${isTurn?' is-turn':''}${isMe?' is-me':''}`;
     let sbHtml = '';
-    if (p.resultPP) { const r = p.resultPP; const win = r.win > 0; sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'⭐':'✗'} PP: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`; }
-    if (p.result21_3) { const r = p.result21_3; const win = r.win > 0; sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'🎲':'✗'} 21+3: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`; }
+    // En torneo, mostrar resultados laterales solo al propio jugador o al final (fase results)
+    const showSideBets = !isTournament || s.phase === 'results' || isMe;
+    if (p.resultPP && showSideBets) { const r = p.resultPP; const win = r.win > 0; sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'⭐':'✗'} PP: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`; }
+    if (p.result21_3 && !isTournament && showSideBets) { const r = p.result21_3; const win = r.win > 0; sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'🎲':'✗'} 21+3: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`; }
     let handsHtml = '';
     if (p.hands && p.hands.length > 0) {
       p.hands.forEach((hand, hIdx) => {
@@ -470,23 +523,26 @@ function render(s) {
         const sc = STATUS_CLASS[hand.status] || '';
         const doubled = hand.doubled ? ' ×2' : '';
         const splitTag = hand.fromSplit ? ' (Split)' : '';
-        handsHtml += `<div class="hand-box${isActive?' active-h':''}"><div class="hand-meta">${p.hands.length > 1 ? `<span style="font-size:.6rem;color:var(--cream2)">Mano ${hIdx+1}${splitTag}</span>` : ''}${hand.bet > 0 ? `<span class="hand-bet-tag">$${hand.bet}${doubled}</span>` : ''}${hand.cards.length > 0 ? `<span class="hand-val">${hv}</span>` : ''}${sl ? `<span class="hand-status ${sc}">${sl}</span>` : ''}</div><div class="hand" style="justify-content:flex-start">${handHTML(hand.cards, true)}</div></div>`;
+        const showStats = !isTournament || s.phase === 'results' || isMe;
+        const displayValue = showStats ? hv : '??';
+        const displayStatus = showStats ? sl : '';
+        handsHtml += `<div class="hand-box${isActive?' active-h':''}"><div class="hand-meta">${p.hands.length > 1 ? `<span style="font-size:.6rem;color:var(--cream2)">Mano ${hIdx+1}${splitTag}</span>` : ''}${hand.bet > 0 ? `<span class="hand-bet-tag">$${hand.bet}${doubled}</span>` : ''}${hand.cards.length > 0 ? `<span class="hand-val">${displayValue}</span>` : ''}${displayStatus ? `<span class="hand-status ${sc}">${displayStatus}</span>` : ''}</div><div class="hand" style="justify-content:flex-start">${handHTML(hand.cards, true, isMe)}</div></div>`;
       });
     } else if (p.status === 'ready') { handsHtml = `<div style="font-size:.68rem;color:var(--gold);opacity:.7;padding:.3rem 0">Listo ✓</div>`; } else { handsHtml = `<div style="font-size:.68rem;color:var(--cream2);opacity:.5;padding:.3rem 0">Esperando…</div>`; }
     el.innerHTML = `<div class="p-head"><span class="p-name">${esc(p.name)}${isMe?'<span class="you-tag">Tú</span>':''}</span><span class="p-bal">$${p.balance}</span></div>${sbHtml ? `<div class="sb-badges">${sbHtml}</div>` : ''}<div class="hands-wrap">${handsHtml}</div>`;
     grid.appendChild(el);
   }
 
+  // Seguro solo casino
   const insZone = document.getElementById('insurance-zone');
-  const myInsDecided = me && me.insuranceDecided;
-  if (s.phase === 'insurance' && me && !myInsDecided && s.gameMode === 'casino') {
+  if (!isTournament && s.phase === 'insurance' && me && !me.insuranceDecided) {
     insZone.classList.add('active');
     const mainBet = me.hands[0]?.bet || 0;
     document.getElementById('ins-text').textContent = `¿Apostar $${Math.ceil(mainBet/2)} a que el dealer tiene Blackjack? (paga 2:1)`;
     document.getElementById('ins-waiting').textContent = '';
     document.getElementById('ins-yes').style.display = '';
     document.getElementById('ins-no').style.display = '';
-  } else if (s.phase === 'insurance' && myInsDecided) {
+  } else if (!isTournament && s.phase === 'insurance' && me && me.insuranceDecided) {
     insZone.classList.add('active');
     document.getElementById('ins-text').textContent = 'Decisión registrada.';
     document.getElementById('ins-waiting').textContent = 'Esperando a los demás jugadores…';
@@ -522,7 +578,8 @@ function render(s) {
     }
   } else { actions.style.display = 'none'; }
 
-  if (s.phase === 'results' && me && me.hands[0]) {
+  // Resultados en chat (solo casino)
+  if (s.phase === 'results' && me && me.hands[0] && !isTournament) {
     const mainHand = me.hands[0];
     const msgs = {
       'blackjack-win': '🃏 ¡BLACKJACK! +' + Math.floor(mainHand.bet * 1.5),
@@ -557,7 +614,7 @@ document.getElementById('clear-main')?.addEventListener('click', () => { bets.ma
 document.getElementById('clear-pp')?.addEventListener('click', () => { bets.pp = 0; updateBetUI(); });
 document.getElementById('clear-s21')?.addEventListener('click', () => { bets.s21 = 0; updateBetUI(); });
 document.getElementById('confirm-bet')?.addEventListener('click', () => {
-  if (bets.main < 1) { showToast('Necesitas al menos $1 de apuesta principal'); return; }
+  if (bets.main < 50) { showToast('La apuesta principal mínima es 50'); return; }
   ws.send(JSON.stringify({ type:'bet', main:bets.main, pp:bets.pp, s21:bets.s21 }));
   bets = { main:0, pp:0, s21:0 }; updateBetUI();
 });
@@ -612,7 +669,7 @@ document.querySelector('#start-chips .chip[data-start="1000"]').style.opacity = 
 
 const modeInfo = {
   casino: '🎰 Modo Casino: Ganas si tu mano supera al dealer. Seguro con As, 10, J, Q, K.',
-  tournament: '🏆 Modo Torneo: Compites contra otros jugadores. El que tiene mejor mano gana. Premios: 1º 50%, 2º 30%, 3º 20% del pozo.'
+  tournament: '🏆 Modo Torneo: Compites contra otros jugadores. Apuesta mínima 50. Segunda carta oculta. Premios: 1º 50%, 2º 30%, 3º 20% del pozo. Si todos se pasan, el pozo se acumula.'
 };
 document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
   radio.addEventListener('change', (e) => {
@@ -621,7 +678,7 @@ document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
   });
 });
 
-// Recompra simple (sin votación)
+// Recompra con votación
 function initRebuyUI() {
   const rebuyChips = document.querySelectorAll('#rebuy-chips .chip');
   rebuyChips.forEach(chip => {
@@ -635,12 +692,12 @@ function initRebuyUI() {
   });
   document.getElementById('rebuy-confirm')?.addEventListener('click', () => {
     if (rebuyAmount < 100) { document.getElementById('rebuy-err').textContent = 'Selecciona un monto'; return; }
-    ws.send(JSON.stringify({ type: 'rebuy', amount: rebuyAmount }));
+    ws.send(JSON.stringify({ type: 'rebuy_request', amount: rebuyAmount }));
     document.getElementById('rebuy-modal').classList.remove('open');
     rebuyAmount = 0;
     document.getElementById('rebuy-amount-display').textContent = '$0';
     rebuyChips.forEach(c => c.style.opacity = '0.6');
-    showToast('Solicitando recompra...');
+    showToast('Solicitud enviada. Esperando votación...');
   });
   document.getElementById('rebuy-cancel')?.addEventListener('click', () => {
     document.getElementById('rebuy-modal').classList.remove('open');
@@ -658,6 +715,24 @@ rebuyBtn.addEventListener('click', () => {
     document.getElementById('rebuy-modal').classList.add('open');
   } else { showToast('Solo puedes comprar fichas entre rondas'); }
 });
+
+// Votación
+function initVoteUI() {
+  document.getElementById('vote-yes')?.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'rebuy_vote', approve: true }));
+    document.getElementById('vote-modal').classList.remove('open');
+  });
+  document.getElementById('vote-no')?.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'rebuy_vote', approve: false }));
+    document.getElementById('vote-modal').classList.remove('open');
+  });
+}
+function handleVoteRequest(data) {
+  document.getElementById('vote-player-name').textContent = `${data.playerName} quiere comprar $${data.amount} fichas`;
+  document.getElementById('vote-amount').textContent = `$${data.amount}`;
+  document.getElementById('vote-waiting').textContent = '';
+  document.getElementById('vote-modal').classList.add('open');
+}
 
 function connect(name, startAmount, gameMode) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -681,10 +756,25 @@ function connect(name, startAmount, gameMode) {
     } else if (msg.type === 'error') {
       document.getElementById('lobby-err').textContent = msg.text;
       document.getElementById('join-btn').disabled = false;
-    } else if (msg.type === 'rebuy_success') {
+    } else if (msg.type === 'rebuy_vote_request') {
+      handleVoteRequest(msg);
+    } else if (msg.type === 'rebuy_complete') {
       showToast(`✅ Recompra exitosa! +$${msg.amount}`);
-    } else if (msg.type === 'rebuy_failed') {
-      showToast(`❌ No se pudo completar la recompra`);
+    } else if (msg.type === 'rebuy_denied') {
+      showToast(`❌ Tu solicitud de recompra fue rechazada`);
+    } else if (msg.type === 'rebuy_vote_closed') {
+      if (!msg.approved) showToast(`La votación de recompra terminó sin aprobación`);
+    } else if (msg.type === 'tournament_results') {
+      let resultText = `🏆 RESULTADOS DEL TORNEO 🏆\n`;
+      if (msg.noWinner) {
+        resultText = `💀 ¡Todos los jugadores se pasaron de 21! El pozo de $${msg.potCarry} se acumula para la próxima ronda.`;
+      } else {
+        msg.results.forEach((r, idx) => {
+          resultText += `${idx+1}. ${r.name} - Gana $${r.win}\n`;
+        });
+      }
+      alert(resultText);
+      addChat(resultText.replace(/\n/g, ' · '), true);
     }
   };
   ws.onclose = () => showToast('Desconectado — recarga la página');
@@ -700,6 +790,11 @@ function tryJoin() {
 document.getElementById('join-btn')?.addEventListener('click', tryJoin);
 document.getElementById('name-in')?.addEventListener('keydown', e => { if (e.key==='Enter') tryJoin(); });
 initRebuyUI();
+initVoteUI();
+document.getElementById('exit-btn')?.addEventListener('click', () => {
+  if (ws) ws.close();
+  window.location.reload();
+});
 </script>
 </body>
 </html>

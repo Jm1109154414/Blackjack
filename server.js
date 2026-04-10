@@ -15,9 +15,11 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
-// Montos permitidos
 const ALLOWED_START_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
 const ALLOWED_REBUY_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+const MIN_BET = 50;
+const DECK_SIZE = 6 * 52; // 6 barajas
+const RESHUFFLE_THRESHOLD = 40;
 
 let state = {
   phase: 'lobby',
@@ -29,6 +31,8 @@ let state = {
   currentPlayerIdx: 0,
   currentHandIdx: 0,
   insuranceTimer: null,
+  pendingRebuy: null,
+  potTotal: 0,        // pozo acumulado para torneo
 };
 
 function createDeck() {
@@ -46,8 +50,21 @@ function createDeck() {
   return full;
 }
 
+function reshuffleAndReorder() {
+  state.deck = createDeck();
+  // Reordenar aleatoriamente los jugadores (cambiar el orden de turno)
+  const playerIds = Object.keys(state.players);
+  if (playerIds.length > 0) {
+    state.order = playerIds.sort(() => Math.random() - 0.5);
+    chat('🃏 ¡Se ha barajado el mazo y se han cambiado los lugares de los jugadores! 🃏', true);
+  }
+  chat(`📢 Nuevo mazo de 6 barajas. Quedan ${state.deck.length} cartas.`, true);
+}
+
 function draw() {
-  if (state.deck.length < 40) state.deck = createDeck();
+  if (state.deck.length < RESHUFFLE_THRESHOLD) {
+    reshuffleAndReorder();
+  }
   return state.deck.pop();
 }
 
@@ -64,6 +81,10 @@ function handValue(cards) {
   return total;
 }
 
+function isBlackjack(cards) {
+  return cards.length === 2 && handValue(cards) === 21;
+}
+
 function checkPerfectPairs(c1, c2) {
   if (c1.rank !== c2.rank) return null;
   if (c1.suit === c2.suit) return { combo: 'perfect', label: 'Par Perfecto', payout: 25 };
@@ -77,6 +98,7 @@ function rankOrder(rank) {
   return m[rank] || 0;
 }
 
+// Solo se usa en casino para 21+3
 function check21plus3(p1, p2, dUp) {
   const cards = [p1, p2, dUp];
   const ranks = cards.map(c => c.rank);
@@ -99,9 +121,24 @@ function publicState(hideHole = true) {
   const players = {};
   for (const id in state.players) {
     const p = state.players[id];
+    let handsCopy = [];
+    if (p.hands) {
+      handsCopy = p.hands.map(hand => {
+        const cardsCopy = hand.cards.map(c => ({ ...c }));
+        // En modo torneo, ocultar la segunda carta inicial para los demás hasta el final
+        if (state.gameMode === 'tournament' && state.phase !== 'results' && state.phase !== 'dealer') {
+          // Para cada mano, la carta con índice 1 (segunda carta) se marca como hidden
+          // Solo si la mano no es de split y aún no se ha destapado
+          if (!hand.fromSplit && cardsCopy.length >= 2) {
+            cardsCopy[1].hidden = true;
+          }
+        }
+        return { ...hand, cards: cardsCopy };
+      });
+    }
     players[id] = {
       id:p.id, name:p.name, balance:p.balance, status:p.status,
-      hands:p.hands, currentHandIdx:p.currentHandIdx,
+      hands: handsCopy, currentHandIdx:p.currentHandIdx,
       sidebet21_3:p.sidebet21_3, sidebetPP:p.sidebetPP,
       result21_3:p.result21_3, resultPP:p.resultPP,
       insuranceBet:p.insuranceBet, insuranceDecided:p.insuranceDecided,
@@ -116,6 +153,13 @@ function publicState(hideHole = true) {
     order:state.order,
     currentPlayerIdx:state.currentPlayerIdx, currentHandIdx:state.currentHandIdx,
     currentPlayerId:state.order[state.currentPlayerIdx]||null,
+    pendingRebuy: state.pendingRebuy ? {
+      playerId: state.pendingRebuy.playerId,
+      playerName: state.players[state.pendingRebuy.playerId]?.name,
+      amount: state.pendingRebuy.amount,
+      votes: state.pendingRebuy.votes
+    } : null,
+    potTotal: state.gameMode === 'tournament' ? state.potTotal : undefined
   };
 }
 
@@ -139,9 +183,24 @@ function allReady() {
 }
 
 function startRound() {
-  state.deck = createDeck();
+  // Barajar si es necesario (al inicio de la ronda)
+  if (!state.deck.length || state.deck.length < RESHUFFLE_THRESHOLD) {
+    reshuffleAndReorder();
+  } else if (state.gameMode === 'tournament') {
+    // En torneo, también se reordena aleatoriamente al inicio de cada ronda (para que nadie tenga ventaja)
+    const playerIds = Object.keys(state.players);
+    if (playerIds.length > 0) {
+      state.order = playerIds.sort(() => Math.random() - 0.5);
+      chat('🎲 Se ha cambiado el orden de los jugadores para esta ronda.', true);
+    }
+  } else {
+    // Modo casino: también reordenar si se desea, pero no es necesario
+    const playerIds = Object.keys(state.players);
+    if (playerIds.length > 0) {
+      state.order = playerIds.sort(() => Math.random() - 0.5);
+    }
+  }
   state.dealer.hand = [];
-  state.order = Object.keys(state.players);
   state.currentPlayerIdx = 0; state.currentHandIdx = 0;
   for (const id of state.order) {
     const p = state.players[id];
@@ -150,11 +209,20 @@ function startRound() {
     p.hands=[{cards:[],bet:p.pendingBet,status:'playing',doubled:false,fromSplit:false}];
     p.pendingBet=0;
   }
+  // Repartir 2 cartas a cada jugador
   for (let round=0;round<2;round++) {
-    for (const id of state.order) state.players[id].hands[0].cards.push(draw());
-    state.dealer.hand.push(draw());
+    for (const id of state.order) {
+      state.players[id].hands[0].cards.push(draw());
+    }
   }
-  const dUp = state.dealer.hand[0];
+  // En modo casino, repartir también al dealer
+  if (state.gameMode === 'casino') {
+    for (let round=0;round<2;round++) state.dealer.hand.push(draw());
+  } else {
+    state.dealer.hand = [];
+  }
+  // Procesar apuestas laterales: Perfect Pairs (sí, 21+3 solo en casino)
+  const dUp = state.dealer.hand[0] || null;
   for (const id of state.order) {
     const p = state.players[id];
     const [c1,c2] = p.hands[0].cards;
@@ -164,23 +232,34 @@ function startRound() {
       else   { p.resultPP={combo:null,label:'Sin par',win:-p.sidebetPP}; }
       p.sidebetPP=0;
     }
-    if (p.sidebet21_3>0) {
+    if (state.gameMode === 'casino' && p.sidebet21_3>0 && dUp) {
       const r = check21plus3(c1,c2,dUp);
       if (r) { p.balance+=p.sidebet21_3*(r.payout+1); p.result21_3={...r,win:p.sidebet21_3*r.payout}; }
       else   { p.result21_3={combo:null,label:'Sin combinación',win:-p.sidebet21_3}; }
       p.sidebet21_3=0;
     }
-    if (handValue([c1,c2])===21) p.hands[0].status='blackjack';
+    if (isBlackjack([c1,c2])) p.hands[0].status='blackjack';
   }
-  // Seguro mejorado: As o cualquier carta de valor 10 (10,J,Q,K)
-  const upRank = dUp.rank;
-  const isTenValue = ['10','J','Q','K'].includes(upRank);
-  if (state.gameMode === 'casino' && (upRank === 'A' || isTenValue)) {
-    state.phase='insurance'; sendState(true);
-    state.insuranceTimer=setTimeout(resolveInsurance,15000);
-  } else {
-    state.phase='playing'; advanceToNextHand();
+  // Calcular pozo inicial para torneo (se suma al acumulado)
+  if (state.gameMode === 'tournament') {
+    let roundPot = 0;
+    for (const id of state.order) {
+      roundPot += state.players[id].hands[0].bet;
+    }
+    state.potTotal += roundPot;
+    sendState(true);
   }
+  // Seguro solo casino y si la carta del dealer es A o 10/J/Q/K
+  if (state.gameMode === 'casino' && dUp) {
+    const upRank = dUp.rank;
+    const isTenValue = ['10','J','Q','K'].includes(upRank);
+    if (upRank === 'A' || isTenValue) {
+      state.phase='insurance'; sendState(true);
+      state.insuranceTimer=setTimeout(resolveInsurance,15000);
+      return;
+    }
+  }
+  state.phase='playing'; advanceToNextHand();
 }
 
 function resolveInsurance() {
@@ -225,11 +304,11 @@ function advanceToNextHand() {
 function dealerTurn() {
   state.phase='dealer'; sendState(false);
   if (state.gameMode === 'tournament') {
-    chat('🏆 Modo Torneo: El dealer solo reparte. Los jugadores compiten entre sí.');
+    // En torneo, no hay dealer. Pasamos directamente a resultados.
     setTimeout(() => resolveRoundTournament(), 2000);
     return;
   }
-  // Modo casino: dealer juega normal
+  // Modo casino
   const tick=setInterval(()=>{
     if (handValue(state.dealer.hand)<17) { state.dealer.hand.push(draw()); sendState(false); }
     else { clearInterval(tick); resolveRoundCasino(); }
@@ -255,7 +334,9 @@ function resolveRoundCasino() {
 
 function resolveRoundTournament() {
   state.phase='results';
-  // Recopilar manos activas de todos los jugadores
+  // Destapar todas las cartas (enviar estado sin ocultar)
+  sendState(false);
+  // Recopilar manos activas
   const playerHands = [];
   for (const id of state.order) {
     const p = state.players[id];
@@ -278,7 +359,15 @@ function resolveRoundTournament() {
       });
     }
   }
-  // Ordenar: mejores manos primero (Blackjack > valor > no bust)
+  // Si no hay manos activas (todos se pasaron o se rindieron)
+  if (playerHands.length === 0 || playerHands.every(ph => ph.isBust)) {
+    chat(`💀 ¡Todos los jugadores se pasaron de 21 (o se rindieron)! El pozo de $${state.potTotal} se acumula para la próxima ronda.`);
+    broadcast({ type: 'tournament_results', noWinner: true, potCarry: state.potTotal });
+    sendState(false);
+    scheduleNextBetting();
+    return;
+  }
+  // Ordenar: blackjack natural primero, luego valor, luego no bust
   playerHands.sort((a, b) => {
     if (a.isBust && !b.isBust) return 1;
     if (!a.isBust && b.isBust) return -1;
@@ -286,68 +375,58 @@ function resolveRoundTournament() {
     if (!a.isBlackjack && b.isBlackjack) return 1;
     return b.value - a.value;
   });
-  // Separar ganadores (los que tienen el mejor valor no-bust)
-  const winners = [];
-  let bestValue = -1;
-  let bestIsBlackjack = false;
+  // Agrupar por valor (manos empatadas)
+  const groups = [];
   for (const ph of playerHands) {
     if (ph.isBust) continue;
-    if (bestValue === -1) {
-      bestValue = ph.value;
-      bestIsBlackjack = ph.isBlackjack;
-      winners.push(ph);
-    } else if (ph.value === bestValue && ph.isBlackjack === bestIsBlackjack) {
-      winners.push(ph);
-    } else break;
+    const key = `${ph.value}|${ph.isBlackjack}`;
+    let group = groups.find(g => g.value === ph.value && g.isBlackjack === ph.isBlackjack);
+    if (!group) {
+      group = { value: ph.value, isBlackjack: ph.isBlackjack, hands: [] };
+      groups.push(group);
+    }
+    group.hands.push(ph);
   }
-  if (winners.length === 0) {
-    chat('💀 ¡Todos los jugadores se pasaron de 21! Nadie gana esta ronda.');
-    for (const ph of playerHands) ph.hand.status = 'lose';
-    sendState(false);
-    scheduleNextBetting();
-    return;
-  }
-  // Calcular pozo total
-  let totalPot = 0;
-  for (const ph of playerHands) totalPot += ph.hand.bet;
-  // Determinar los 3 primeros puestos (puede haber empates)
-  // Agrupar por valor (descendente)
-  const grouped = [];
-  for (const ph of playerHands) {
-    if (ph.isBust) continue;
-    let found = grouped.find(g => g.value === ph.value && g.isBlackjack === ph.isBlackjack);
-    if (found) found.hands.push(ph);
-    else grouped.push({ value: ph.value, isBlackjack: ph.isBlackjack, hands: [ph] });
-  }
-  // Asignar porcentajes: 1º 50%, 2º 30%, 3º 20%
-  const percentages = [0.5, 0.3, 0.2];
+  // Asignar premios según número de jugadores activos (manos)
+  const activeCount = playerHands.filter(ph => !ph.isBust).length;
+  let percentages = [];
+  if (activeCount === 1) percentages = [1.0];
+  else if (activeCount === 2) percentages = [0.6, 0.4];
+  else percentages = [0.5, 0.3, 0.2]; // 3 o más
+  const totalPot = state.potTotal;
+  const results = [];
   let remainingPot = totalPot;
-  for (let i = 0; i < Math.min(grouped.length, percentages.length); i++) {
-    const group = grouped[i];
+  for (let i = 0; i < Math.min(groups.length, percentages.length); i++) {
+    const group = groups[i];
     const share = Math.floor(totalPot * percentages[i]);
     const perWinner = Math.floor(share / group.hands.length);
     for (const ph of group.hands) {
       ph.player.balance += perWinner;
       ph.hand.status = 'win';
       ph.hand.winAmount = perWinner;
+      results.push({ name: ph.player.name, win: perWinner, place: i+1 });
       chat(`🏆 ${ph.player.name} gana $${perWinner} (${i+1}º puesto) con ${ph.value} puntos!`);
     }
     remainingPot -= share;
   }
-  // Si sobra algo por redondeo, se le da al primer grupo
-  if (remainingPot > 0 && grouped.length > 0) {
-    const extra = Math.floor(remainingPot / grouped[0].hands.length);
-    for (const ph of grouped[0].hands) {
+  // Si sobra algo por redondeo, se lo damos al primer grupo
+  if (remainingPot > 0 && groups.length > 0) {
+    const extra = Math.floor(remainingPot / groups[0].hands.length);
+    for (const ph of groups[0].hands) {
       ph.player.balance += extra;
       ph.hand.winAmount += extra;
+      const existing = results.find(r => r.name === ph.player.name);
+      if (existing) existing.win += extra;
     }
   }
-  // Los perdedores (los que no están en los primeros puestos)
+  // Los perdedores (manos que no están en los primeros puestos)
   for (const ph of playerHands) {
     if (!ph.hand.status) ph.hand.status = 'lose';
   }
-  const dealerValue = handValue(state.dealer.hand);
-  chat(`📊 Mano del dealer: ${dealerValue} puntos (solo referencia)`);
+  // Enviar resultados destacados en un popup
+  broadcast({ type: 'tournament_results', results: results.slice(0,3) });
+  // Resetear pozo para la próxima ronda
+  state.potTotal = 0;
   sendState(false);
   scheduleNextBetting();
 }
@@ -360,23 +439,93 @@ function scheduleNextBetting() {
       p.hands=[]; p.status='waiting'; p.pendingBet=0; p.sidebet21_3=0; p.sidebetPP=0;
       p.result21_3=null; p.resultPP=null; p.insuranceBet=0; p.insuranceDecided=false; p.currentHandIdx=0;
     }
+    // En torneo, no resetear potTotal aquí porque se acumula. Solo se resetea cuando hay ganadores.
     sendState();
   },7000);
 }
 
-// ========== RECOMPRA SIMPLE (sin votación) ==========
-function handleRebuy(playerId, amount) {
+// ========== VOTACIÓN DE RECOMPRA ==========
+function startRebuyVote(playerId, amount) {
+  if (state.pendingRebuy) {
+    toPlayer(playerId, { type: 'error', text: 'Ya hay una votación de recompra en curso' });
+    return;
+  }
   const player = state.players[playerId];
-  if (!player) return false;
+  if (!player) return;
   if (!ALLOWED_REBUY_AMOUNTS.includes(amount)) {
     toPlayer(playerId, { type: 'error', text: 'Monto no válido' });
-    return false;
+    return;
   }
-  player.balance += amount;
-  chat(`${player.name} compró $${amount} en fichas.`);
-  toPlayer(playerId, { type: 'rebuy_success', amount });
+  const otherPlayers = Object.keys(state.players).filter(id => id !== playerId);
+  if (otherPlayers.length === 0) {
+    player.balance += amount;
+    chat(`${player.name} compró $${amount} en fichas (sin otros jugadores)`);
+    toPlayer(playerId, { type: 'rebuy_complete', amount });
+    sendState();
+    return;
+  }
+  state.pendingRebuy = {
+    playerId,
+    amount,
+    votes: {},
+    voters: [...otherPlayers]
+  };
+  chat(`🗳️ ${player.name} solicita comprar $${amount} en fichas. Votación iniciada (30s).`);
+  for (const voterId of otherPlayers) {
+    toPlayer(voterId, {
+      type: 'rebuy_vote_request',
+      playerName: player.name,
+      amount,
+    });
+  }
+  setTimeout(() => {
+    if (state.pendingRebuy && state.pendingRebuy.playerId === playerId) {
+      resolveRebuyVote();
+    }
+  }, 30000);
   sendState();
-  return true;
+}
+
+function resolveRebuyVote() {
+  if (!state.pendingRebuy) return;
+  const { playerId, amount, votes, voters } = state.pendingRebuy;
+  const player = state.players[playerId];
+  const totalVotes = Object.keys(votes).length;
+  const yesVotes = Object.values(votes).filter(v => v === true).length;
+  const noVotes = Object.values(votes).filter(v => v === false).length;
+  const approved = totalVotes > 0 && yesVotes > noVotes;
+  if (approved && player) {
+    player.balance += amount;
+    chat(`✅ ${player.name} compró $${amount} en fichas (Aprobado: ${yesVotes} sí, ${noVotes} no)`);
+    toPlayer(playerId, { type: 'rebuy_complete', amount });
+  } else if (player) {
+    chat(`❌ Rechazada recompra de ${player.name} por $${amount} (${yesVotes} sí, ${noVotes} no)`);
+    toPlayer(playerId, { type: 'rebuy_denied' });
+  }
+  for (const voterId of voters) {
+    toPlayer(voterId, { type: 'rebuy_vote_closed', approved });
+  }
+  state.pendingRebuy = null;
+  sendState();
+}
+
+function castVote(voterId, approve) {
+  if (!state.pendingRebuy) {
+    toPlayer(voterId, { type: 'error', text: 'No hay votación activa' });
+    return;
+  }
+  if (state.pendingRebuy.votes[voterId] !== undefined) {
+    toPlayer(voterId, { type: 'error', text: 'Ya votaste' });
+    return;
+  }
+  if (!state.pendingRebuy.voters.includes(voterId)) return;
+  state.pendingRebuy.votes[voterId] = approve;
+  toPlayer(voterId, { type: 'vote_cast', approve });
+  chat(`${state.players[voterId]?.name} ${approve ? 'aprobó' : 'rechazó'} la recompra de ${state.players[state.pendingRebuy.playerId]?.name}`);
+  if (Object.keys(state.pendingRebuy.votes).length === state.pendingRebuy.voters.length) {
+    resolveRebuyVote();
+  }
+  sendState();
 }
 
 // ========== WEBSOCKET ==========
@@ -400,6 +549,8 @@ wss.on('connection',(ws)=>{
       if (Object.keys(state.players).length === 0) {
         state.gameMode = requestedMode;
         chat(`🎮 Modo de juego: ${state.gameMode === 'casino' ? 'Casino (vs Dealer)' : 'Torneo (Jugadores vs Jugadores)'}`);
+        // Inicializar mazo si es necesario
+        if (!state.deck.length) reshuffleAndReorder();
       } else if (state.gameMode !== requestedMode) {
         ws.send(JSON.stringify({type:'error',text:`El juego ya está en modo ${state.gameMode === 'casino' ? 'Casino' : 'Torneo'}. No puedes cambiarlo.`}));
         return;
@@ -419,9 +570,10 @@ wss.on('connection',(ws)=>{
     if (msg.type==='bet') {
       if (state.phase!=='betting'||player.status==='ready') return;
       const main=parseInt(msg.main)||0, pp=parseInt(msg.pp)||0, s21=parseInt(msg.s21)||0;
-      if (main<1||(main+pp+s21)>player.balance) return;
+      if (main < MIN_BET) { toPlayer(myId, { type: 'error', text: `La apuesta principal mínima es ${MIN_BET}` }); return; }
+      if ((main+pp+s21) > player.balance) { toPlayer(myId, { type: 'error', text: 'No tienes suficientes fichas' }); return; }
       player.balance-=(main+pp+s21); player.pendingBet=main; player.sidebetPP=pp; player.sidebet21_3=s21; player.status='ready';
-      let t=`${player.name} apostó $${main}`; if(pp>0)t+=` · PP $${pp}`; if(s21>0)t+=` · 21+3 $${s21}`; chat(t);
+      let t=`${player.name} apostó $${main}`; if(pp>0)t+=` · PP $${pp}`; if(s21>0 && state.gameMode==='casino')t+=` · 21+3 $${s21}`; chat(t);
       if (allReady()) setTimeout(startRound,1200); else sendState(); 
       return;
     }
@@ -438,13 +590,18 @@ wss.on('connection',(ws)=>{
       return;
     }
     
-    if (msg.type==='rebuy') {
+    if (msg.type==='rebuy_request') {
       if (state.phase !== 'betting' && state.phase !== 'lobby') {
         toPlayer(myId, { type: 'error', text: 'Solo puedes comprar fichas entre rondas' });
         return;
       }
       const amount = parseInt(msg.amount);
-      handleRebuy(myId, amount);
+      startRebuyVote(myId, amount);
+      return;
+    }
+    
+    if (msg.type==='rebuy_vote') {
+      castVote(myId, msg.approve);
       return;
     }
     
@@ -468,12 +625,14 @@ wss.on('connection',(ws)=>{
     } else if (msg.type==='double') {
       if (hand.cards.length!==2||player.balance<hand.bet) return;
       player.balance-=hand.bet; hand.bet*=2; hand.doubled=true; hand.cards.push(draw());
+      if (state.gameMode === 'tournament') state.potTotal += hand.bet/2; // la apuesta extra se añade al pozo
       hand.status=handValue(hand.cards)>21?'bust':'stand'; state.currentHandIdx++; advanceToNextHand();
     } else if (msg.type==='split') {
       if (hand.cards.length!==2) return;
       const [c1,c2]=hand.cards;
       if (rankVal(c1.rank)!==rankVal(c2.rank)||player.balance<hand.bet||player.hands.length>=4) return;
       const isAce=c1.rank==='A'; player.balance-=hand.bet;
+      if (state.gameMode === 'tournament') state.potTotal += hand.bet;
       hand.cards=[c1,draw()]; if(isAce||handValue(hand.cards)===21)hand.status='stand';
       const nh={cards:[c2,draw()],bet:hand.bet,status:'playing',doubled:false,fromSplit:true};
       if(isAce||handValue(nh.cards)===21)nh.status='stand';
@@ -481,7 +640,10 @@ wss.on('connection',(ws)=>{
       if (hand.status==='playing') sendState(); else advanceToNextHand();
     } else if (msg.type==='surrender') {
       if (hand.cards.length!==2||hand.fromSplit||player.hands.length>1) return;
-      player.balance+=Math.floor(hand.bet/2); hand.status='surrender'; state.currentHandIdx++; advanceToNextHand();
+      const refund = Math.floor(hand.bet/2);
+      player.balance+=refund;
+      if (state.gameMode === 'tournament') state.potTotal -= refund;
+      hand.status='surrender'; state.currentHandIdx++; advanceToNextHand();
     }
   });
   
