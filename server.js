@@ -15,6 +15,7 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
+// Montos permitidos
 const ALLOWED_START_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
 const ALLOWED_REBUY_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
 
@@ -28,7 +29,6 @@ let state = {
   currentPlayerIdx: 0,
   currentHandIdx: 0,
   insuranceTimer: null,
-  pendingRebuy: null,
 };
 
 function createDeck() {
@@ -116,12 +116,6 @@ function publicState(hideHole = true) {
     order:state.order,
     currentPlayerIdx:state.currentPlayerIdx, currentHandIdx:state.currentHandIdx,
     currentPlayerId:state.order[state.currentPlayerIdx]||null,
-    pendingRebuy: state.pendingRebuy ? {
-      playerId: state.pendingRebuy.playerId,
-      playerName: state.players[state.pendingRebuy.playerId]?.name,
-      amount: state.pendingRebuy.amount,
-      votes: state.pendingRebuy.votes
-    } : null
   };
 }
 
@@ -178,7 +172,7 @@ function startRound() {
     }
     if (handValue([c1,c2])===21) p.hands[0].status='blackjack';
   }
-  // Seguro mejorado: se ofrece si la carta visible es As o cualquier carta de valor 10 (10,J,Q,K)
+  // Seguro mejorado: As o cualquier carta de valor 10 (10,J,Q,K)
   const upRank = dUp.rank;
   const isTenValue = ['10','J','Q','K'].includes(upRank);
   if (state.gameMode === 'casino' && (upRank === 'A' || isTenValue)) {
@@ -235,6 +229,7 @@ function dealerTurn() {
     setTimeout(() => resolveRoundTournament(), 2000);
     return;
   }
+  // Modo casino: dealer juega normal
   const tick=setInterval(()=>{
     if (handValue(state.dealer.hand)<17) { state.dealer.hand.push(draw()); sendState(false); }
     else { clearInterval(tick); resolveRoundCasino(); }
@@ -260,7 +255,8 @@ function resolveRoundCasino() {
 
 function resolveRoundTournament() {
   state.phase='results';
-  const activePlayers = [];
+  // Recopilar manos activas de todos los jugadores
+  const playerHands = [];
   for (const id of state.order) {
     const p = state.players[id];
     if (!p) continue;
@@ -271,53 +267,84 @@ function resolveRoundTournament() {
         hand.status = hand.status === 'bust' ? 'bust' : 'surrender';
         continue;
       }
-      activePlayers.push({
-        id, playerId: id, player: p, handIdx: hIdx, hand, value: pv,
+      playerHands.push({
+        playerId: id,
+        player: p,
+        handIdx: hIdx,
+        hand,
+        value: pv,
         isBlackjack: hand.status === 'blackjack',
         isBust: pv > 21
       });
     }
   }
-  activePlayers.sort((a, b) => {
+  // Ordenar: mejores manos primero (Blackjack > valor > no bust)
+  playerHands.sort((a, b) => {
     if (a.isBust && !b.isBust) return 1;
     if (!a.isBust && b.isBust) return -1;
     if (a.isBlackjack && !b.isBlackjack) return -1;
     if (!a.isBlackjack && b.isBlackjack) return 1;
     return b.value - a.value;
   });
+  // Separar ganadores (los que tienen el mejor valor no-bust)
   const winners = [];
   let bestValue = -1;
   let bestIsBlackjack = false;
-  for (const player of activePlayers) {
-    if (player.isBust) continue;
+  for (const ph of playerHands) {
+    if (ph.isBust) continue;
     if (bestValue === -1) {
-      bestValue = player.value;
-      bestIsBlackjack = player.isBlackjack;
-      winners.push(player);
-    } else if (player.value === bestValue && player.isBlackjack === bestIsBlackjack) {
-      winners.push(player);
+      bestValue = ph.value;
+      bestIsBlackjack = ph.isBlackjack;
+      winners.push(ph);
+    } else if (ph.value === bestValue && ph.isBlackjack === bestIsBlackjack) {
+      winners.push(ph);
     } else break;
   }
   if (winners.length === 0) {
     chat('💀 ¡Todos los jugadores se pasaron de 21! Nadie gana esta ronda.');
-    for (const p of activePlayers) p.hand.status = 'lose';
+    for (const ph of playerHands) ph.hand.status = 'lose';
     sendState(false);
     scheduleNextBetting();
     return;
   }
+  // Calcular pozo total
   let totalPot = 0;
-  const losers = activePlayers.filter(p => !winners.includes(p));
-  for (const player of activePlayers) totalPot += player.hand.bet;
-  const totalWinnerBets = winners.reduce((sum, w) => sum + w.hand.bet, 0);
-  for (const winner of winners) {
-    const winAmount = Math.floor((winner.hand.bet / totalWinnerBets) * totalPot);
-    winner.player.balance += winAmount;
-    winner.hand.status = 'win';
-    winner.hand.winAmount = winAmount;
-    chat(`🏆 ${winner.player.name} gana $${winAmount} con ${winner.value} puntos!`);
+  for (const ph of playerHands) totalPot += ph.hand.bet;
+  // Determinar los 3 primeros puestos (puede haber empates)
+  // Agrupar por valor (descendente)
+  const grouped = [];
+  for (const ph of playerHands) {
+    if (ph.isBust) continue;
+    let found = grouped.find(g => g.value === ph.value && g.isBlackjack === ph.isBlackjack);
+    if (found) found.hands.push(ph);
+    else grouped.push({ value: ph.value, isBlackjack: ph.isBlackjack, hands: [ph] });
   }
-  for (const loser of losers) {
-    loser.hand.status = 'lose';
+  // Asignar porcentajes: 1º 50%, 2º 30%, 3º 20%
+  const percentages = [0.5, 0.3, 0.2];
+  let remainingPot = totalPot;
+  for (let i = 0; i < Math.min(grouped.length, percentages.length); i++) {
+    const group = grouped[i];
+    const share = Math.floor(totalPot * percentages[i]);
+    const perWinner = Math.floor(share / group.hands.length);
+    for (const ph of group.hands) {
+      ph.player.balance += perWinner;
+      ph.hand.status = 'win';
+      ph.hand.winAmount = perWinner;
+      chat(`🏆 ${ph.player.name} gana $${perWinner} (${i+1}º puesto) con ${ph.value} puntos!`);
+    }
+    remainingPot -= share;
+  }
+  // Si sobra algo por redondeo, se le da al primer grupo
+  if (remainingPot > 0 && grouped.length > 0) {
+    const extra = Math.floor(remainingPot / grouped[0].hands.length);
+    for (const ph of grouped[0].hands) {
+      ph.player.balance += extra;
+      ph.hand.winAmount += extra;
+    }
+  }
+  // Los perdedores (los que no están en los primeros puestos)
+  for (const ph of playerHands) {
+    if (!ph.hand.status) ph.hand.status = 'lose';
   }
   const dealerValue = handValue(state.dealer.hand);
   chat(`📊 Mano del dealer: ${dealerValue} puntos (solo referencia)`);
@@ -337,95 +364,22 @@ function scheduleNextBetting() {
   },7000);
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  VOTACIÓN DE RECOMPRA (completa)
-// ═══════════════════════════════════════════════════════════════
-function startRebuyVote(playerId, amount) {
-  if (state.pendingRebuy) {
-    toPlayer(playerId, { type: 'error', text: 'Ya hay una votación de recompra en curso' });
-    return;
-  }
+// ========== RECOMPRA SIMPLE (sin votación) ==========
+function handleRebuy(playerId, amount) {
   const player = state.players[playerId];
-  if (!player) return;
+  if (!player) return false;
   if (!ALLOWED_REBUY_AMOUNTS.includes(amount)) {
     toPlayer(playerId, { type: 'error', text: 'Monto no válido' });
-    return;
+    return false;
   }
-  const otherPlayers = Object.keys(state.players).filter(id => id !== playerId);
-  if (otherPlayers.length === 0) {
-    player.balance += amount;
-    chat(`${player.name} compró $${amount} en fichas (sin otros jugadores)`);
-    toPlayer(playerId, { type: 'rebuy_complete', amount });
-    sendState();
-    return;
-  }
-  state.pendingRebuy = {
-    playerId,
-    amount,
-    votes: {},
-    voters: [...otherPlayers]
-  };
-  chat(`🗳️ ${player.name} solicita comprar $${amount} en fichas. Votación iniciada.`);
-  for (const voterId of otherPlayers) {
-    toPlayer(voterId, {
-      type: 'rebuy_vote_request',
-      playerName: player.name,
-      amount,
-    });
-  }
-  setTimeout(() => {
-    if (state.pendingRebuy && state.pendingRebuy.playerId === playerId) {
-      resolveRebuyVote();
-    }
-  }, 30000);
+  player.balance += amount;
+  chat(`${player.name} compró $${amount} en fichas.`);
+  toPlayer(playerId, { type: 'rebuy_success', amount });
   sendState();
+  return true;
 }
 
-function resolveRebuyVote() {
-  if (!state.pendingRebuy) return;
-  const { playerId, amount, votes, voters } = state.pendingRebuy;
-  const player = state.players[playerId];
-  const totalVoters = voters.length;
-  const yesVotes = Object.values(votes).filter(v => v === true).length;
-  const noVotes = Object.values(votes).filter(v => v === false).length;
-  const approved = yesVotes > noVotes;
-  if (approved && player) {
-    player.balance += amount;
-    chat(`✅ ${player.name} compró $${amount} en fichas (Aprobado: ${yesVotes}/${totalVoters})`);
-    toPlayer(playerId, { type: 'rebuy_complete', amount });
-  } else if (player) {
-    chat(`❌ Rechazada recompra de ${player.name} por $${amount} (${yesVotes} sí, ${noVotes} no)`);
-    toPlayer(playerId, { type: 'rebuy_denied' });
-  }
-  for (const voterId of voters) {
-    toPlayer(voterId, { type: 'rebuy_vote_closed', approved });
-  }
-  state.pendingRebuy = null;
-  sendState();
-}
-
-function castVote(voterId, approve) {
-  if (!state.pendingRebuy) {
-    toPlayer(voterId, { type: 'error', text: 'No hay votación activa' });
-    return;
-  }
-  if (state.pendingRebuy.votes[voterId] !== undefined) {
-    toPlayer(voterId, { type: 'error', text: 'Ya votaste' });
-    return;
-  }
-  if (!state.pendingRebuy.voters.includes(voterId)) return;
-  state.pendingRebuy.votes[voterId] = approve;
-  toPlayer(voterId, { type: 'vote_cast', approve });
-  chat(`${state.players[voterId]?.name} ${approve ? 'aprobó' : 'rechazó'} la recompra de ${state.players[state.pendingRebuy.playerId]?.name}`);
-  if (Object.keys(state.pendingRebuy.votes).length === state.pendingRebuy.voters.length) {
-    resolveRebuyVote();
-  }
-  sendState();
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  WEBSOCKET CONNECTION
-// ═══════════════════════════════════════════════════════════════
+// ========== WEBSOCKET ==========
 wss.on('connection',(ws)=>{
   let myId=null;
   ws.on('message',(raw)=>{
@@ -484,18 +438,13 @@ wss.on('connection',(ws)=>{
       return;
     }
     
-    if (msg.type==='rebuy_request') {
+    if (msg.type==='rebuy') {
       if (state.phase !== 'betting' && state.phase !== 'lobby') {
         toPlayer(myId, { type: 'error', text: 'Solo puedes comprar fichas entre rondas' });
         return;
       }
       const amount = parseInt(msg.amount);
-      startRebuyVote(myId, amount);
-      return;
-    }
-    
-    if (msg.type==='rebuy_vote') {
-      castVote(myId, msg.approve);
+      handleRebuy(myId, amount);
       return;
     }
     

@@ -19,7 +19,7 @@ html,body{height:100%;background:radial-gradient(ellipse at 50% 20%,#0d2417 0%,v
   color:var(--cream);font-family:'Cinzel',serif;overflow-x:hidden}
 body{display:flex;flex-direction:column;align-items:center;min-height:100vh}
 
-/* ═══════ LOBBY ═══════════════════════════════════════════════════ */
+/* LOBBY */
 #lobby{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   background:radial-gradient(ellipse at 50% 35%,#0d2417,#020a04)}
@@ -44,14 +44,16 @@ body{display:flex;flex-direction:column;align-items:center;min-height:100vh}
   box-shadow:0 4px 16px rgba(201,168,76,.3);transition:all .2s}
 .btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,168,76,.5)}
 .btn-gold:disabled{opacity:.4;pointer-events:none}
+
+/* TABLA */
 #table{width:100%;max-width:1100px;padding:1rem 1.2rem 2rem;display:none}
 header.bar{display:flex;align-items:center;justify-content:space-between;
   padding:.6rem 0;border-bottom:1px solid rgba(201,168,76,.15);margin-bottom:.8rem}
 .logo{font-family:'Cinzel Decorative',cursive;color:var(--gold);font-size:1.3rem}
 #my-balance{font-size:.85rem;color:var(--gold2)}
 #my-balance span{font-size:1.15rem;font-weight:700}
-#mode-banner{text-align:center;font-size:.8rem;color:var(--gold);background:rgba(0,0,0,.3);
-  padding:.3rem;border-radius:8px;margin-bottom:.5rem;font-weight:bold}
+#mode-banner{text-align:center;font-size:.75rem;color:var(--gold);background:rgba(0,0,0,.3);
+  padding:.2rem;border-radius:8px;margin-bottom:.3rem}
 #phase-banner{text-align:center;font-family:'Lora',serif;font-style:italic;
   font-size:1rem;color:var(--cream2);letter-spacing:.08em;margin-bottom:.8rem}
 .felt{background:radial-gradient(ellipse at 50% 50%,var(--felt),var(--felt2));
@@ -107,10 +109,13 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 #insurance-zone p{font-family:'Lora',serif;font-size:.85rem;color:var(--cream2);font-style:italic}
 .ins-btns{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center}
 .btn-ins-yes{padding:.65rem 1.4rem;background:linear-gradient(135deg,#1e6b43,#27ae60);
-  color:#fff;border:none;border-radius:8px;font-family:'Cinzel',serif;font-size:.85rem;font-weight:700;cursor:pointer}
+  color:#fff;border:none;border-radius:8px;font-family:'Cinzel',serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s}
+.btn-ins-yes:hover{transform:translateY(-1px)}
 .btn-ins-no{padding:.65rem 1.4rem;background:rgba(0,0,0,.35);
   border:1px solid rgba(201,168,76,.3);color:var(--cream2);border-radius:8px;
-  font-family:'Cinzel',serif;font-size:.85rem;cursor:pointer}
+  font-family:'Cinzel',serif;font-size:.85rem;cursor:pointer;transition:all .18s}
+.btn-ins-no:hover{background:rgba(201,168,76,.1)}
+#ins-waiting{font-size:.75rem;color:var(--cream2);opacity:.6;font-family:'Lora',serif;font-style:italic}
 #betting-zone{display:none;flex-direction:column;gap:.9rem;
   background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.2);
   border-radius:14px;padding:1.2rem;margin-bottom:.8rem}
@@ -132,21 +137,22 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 .bet-amt{font-size:1.4rem;color:var(--gold);font-weight:700;min-width:50px;text-align:center}
 .bet-amt.sm{font-size:1rem}
 .btn-sm{padding:.35rem .8rem;border:1px solid rgba(201,168,76,.35);background:transparent;
-  color:var(--cream2);border-radius:6px;font-family:'Cinzel',serif;font-size:.72rem;cursor:pointer}
+  color:var(--cream2);border-radius:6px;font-family:'Cinzel',serif;font-size:.72rem;cursor:pointer;transition:all .15s}
 .btn-sm:hover{background:rgba(201,168,76,.12)}
 #waiting-txt{font-family:'Lora',serif;font-style:italic;font-size:.82rem;color:var(--cream2);opacity:.65;text-align:center}
 #actions{display:none;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-bottom:.8rem}
 .btn-act{padding:.72rem 1.4rem;border:none;border-radius:10px;font-family:'Cinzel',serif;
-  font-size:.85rem;font-weight:700;cursor:pointer;letter-spacing:.05em}
-.btn-hit{background:linear-gradient(135deg,#27ae60,#1e6b43);color:#fff}
-.btn-stand{background:linear-gradient(135deg,#c0392b,#922b21);color:#fff}
-.btn-double{background:linear-gradient(135deg,#f39c12,#b7770d);color:#fff}
-.btn-split{background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff}
+  font-size:.85rem;font-weight:700;cursor:pointer;letter-spacing:.05em;transition:all .18s}
+.btn-hit{background:linear-gradient(135deg,#27ae60,#1e6b43);color:#fff;box-shadow:0 4px 14px rgba(39,174,96,.3)}
+.btn-stand{background:linear-gradient(135deg,#c0392b,#922b21);color:#fff;box-shadow:0 4px 14px rgba(192,57,43,.3)}
+.btn-double{background:linear-gradient(135deg,#f39c12,#b7770d);color:#fff;box-shadow:0 4px 14px rgba(243,156,18,.3)}
+.btn-split{background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;box-shadow:0 4px 14px rgba(142,68,173,.3)}
 .btn-surr{background:rgba(0,0,0,.4);color:var(--cream2);border:1px solid rgba(201,168,76,.3)}
 .btn-act:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.1)}
 .btn-act:disabled{opacity:.3;pointer-events:none}
 #chat-box{background:rgba(0,0,0,.28);border-radius:10px;border:1px solid rgba(255,255,255,.06);overflow:hidden;margin-bottom:.5rem}
-#chat-log{height:100px;overflow-y:auto;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.25rem}
+#chat-log{height:100px;overflow-y:auto;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.25rem;
+  scrollbar-width:thin;scrollbar-color:rgba(201,168,76,.25) transparent}
 .cm{font-size:.72rem;color:var(--cream2);line-height:1.4}
 .cm.sys{color:rgba(201,168,76,.65);font-style:italic}
 .chat-inp{display:flex;border-top:1px solid rgba(255,255,255,.06)}
@@ -157,41 +163,52 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 #toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%) translateY(-90px);
   background:rgba(10,20,10,.96);border:1px solid var(--gold);border-radius:10px;
   padding:.65rem 1.5rem;font-family:'Lora',serif;font-size:1.05rem;
-  color:var(--gold2);letter-spacing:.08em;z-index:500;transition:transform .4s}
+  color:var(--gold2);letter-spacing:.08em;z-index:500;transition:transform .4s cubic-bezier(.175,.885,.32,1.275)}
 #toast.show{transform:translateX(-50%) translateY(0)}
 #rules-btn{position:fixed;bottom:1.2rem;right:1.2rem;z-index:300;
   background:rgba(10,20,12,.92);border:1px solid rgba(201,168,76,.4);
   color:var(--gold);padding:.6rem 1.1rem;border-radius:10px;font-family:'Cinzel',serif;
-  font-size:.78rem;cursor:pointer;letter-spacing:.1em;box-shadow:var(--shadow)}
+  font-size:.78rem;cursor:pointer;letter-spacing:.1em;
+  box-shadow:var(--shadow);transition:all .2s}
+#rules-btn:hover{background:rgba(201,168,76,.15)}
 #rules-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.65);
   display:none;align-items:flex-start;justify-content:flex-end}
 #rules-overlay.open{display:flex}
 #rules-panel{width:min(480px,100%);height:100vh;overflow-y:auto;
   background:linear-gradient(180deg,#0a1e0d,#071208);
-  border-left:1px solid rgba(201,168,76,.25);padding:1.5rem}
+  border-left:1px solid rgba(201,168,76,.25);padding:1.5rem;
+  scrollbar-width:thin;scrollbar-color:rgba(201,168,76,.25) transparent}
 .rules-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
-.rules-header h2{font-family:'Cinzel Decorative',cursive;color:var(--gold);font-size:1.3rem}
+.rules-header h2{font-family:'Cinzel Decorative',cursive;color:var(--gold);font-size:1.3rem;letter-spacing:.06em}
 #rules-close{background:transparent;border:1px solid rgba(201,168,76,.3);color:var(--gold);
   padding:.3rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.85rem;cursor:pointer}
 .rules-section{border:1px solid rgba(201,168,76,.18);border-radius:10px;margin-bottom:.7rem;overflow:hidden}
 .rules-section summary{padding:.75rem 1rem;cursor:pointer;list-style:none;
   display:flex;justify-content:space-between;align-items:center;
   font-size:.8rem;letter-spacing:.1em;color:var(--gold2);
-  background:rgba(201,168,76,.07)}
+  background:rgba(201,168,76,.07);user-select:none}
 .rules-section summary::-webkit-details-marker{display:none}
 .rules-section summary::after{content:'▾';font-size:.75rem;transition:transform .2s;color:var(--gold)}
 .rules-section[open] summary::after{transform:rotate(180deg)}
+.rules-section summary:hover{background:rgba(201,168,76,.12)}
 .rules-body{padding:.9rem 1rem;font-family:'Lora',serif;font-size:.82rem;line-height:1.7;
   color:var(--cream2);border-top:1px solid rgba(201,168,76,.12)}
-.rules-body strong{color:var(--gold2)}
-.payout-table{width:100%;border-collapse:collapse;margin-top:.6rem}
-.payout-table th{color:var(--gold);padding:.4rem .6rem;border-bottom:1px solid rgba(201,168,76,.25);text-align:left}
-.payout-table td{padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05)}
+.rules-body strong{color:var(--gold2);font-family:'Cinzel',serif;font-size:.77rem}
+.rules-body ul{padding-left:1.2rem;margin:.4rem 0}
+.rules-body li{margin-bottom:.3rem}
+.payout-table{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.78rem}
+.payout-table th{color:var(--gold);font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.1em;
+  padding:.4rem .6rem;border-bottom:1px solid rgba(201,168,76,.25);text-align:left}
+.payout-table td{padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);color:var(--cream2)}
+.payout-table tr:last-child td{border-bottom:none}
 .hi{color:var(--gold2);font-weight:700}
-#rebuy-overlay, #vote-overlay{position:fixed;inset:0;z-index:450;display:none;background:rgba(0,0,0,.85);align-items:center;justify-content:center}
-#rebuy-overlay.open, #vote-overlay.open{display:flex}
-#rebuy-panel, #vote-panel{background:linear-gradient(180deg,#0a1e0d,#071208);border:2px solid var(--gold3);border-radius:16px;padding:1.5rem;width:min(400px,90%);text-align:center;box-shadow:var(--shadow)}
-#rebuy-panel h3, #vote-panel h3{font-family:'Cinzel Decorative',cursive;color:var(--gold);margin-bottom:.5rem}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(201,168,76,.25);border-radius:2px}
+#rebuy-modal{position:fixed;inset:0;z-index:450;display:none;background:rgba(0,0,0,.85);align-items:center;justify-content:center}
+#rebuy-modal.open{display:flex}
+#rebuy-panel{background:linear-gradient(180deg,#0a1e0d,#071208);border:2px solid var(--gold3);border-radius:16px;padding:1.5rem;width:min(400px,90%);text-align:center;box-shadow:var(--shadow)}
+#rebuy-panel h3{font-family:'Cinzel Decorative',cursive;color:var(--gold);margin-bottom:.5rem}
 </style>
 </head>
 <body>
@@ -215,7 +232,6 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <div style="margin-top:.5rem;text-align:center">
       <span id="selected-start" style="color:var(--gold);font-weight:bold">$1000</span>
     </div>
-    <!-- Selector de modo -->
     <div><label style="margin-top:0.8rem;display:block">🎮 Modo de juego</label>
       <div style="display:flex;gap:1rem;margin-top:.5rem;justify-content:center">
         <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
@@ -243,7 +259,6 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   <div id="mode-banner"></div>
   <div id="phase-banner">Esperando jugadores…</div>
 
-  <!-- Dealer -->
   <div class="felt">
     <div class="dealer-zone">
       <div class="zone-lbl">— Dealer —</div>
@@ -252,10 +267,8 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     </div>
   </div>
 
-  <!-- Jugadores -->
   <div id="players-grid"></div>
 
-  <!-- Seguro -->
   <div id="insurance-zone">
     <h3>🛡️ El Dealer muestra una carta fuerte</h3>
     <p id="ins-text">¿Deseas tomar un seguro contra Blackjack del dealer?</p>
@@ -266,7 +279,6 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <div id="ins-waiting"></div>
   </div>
 
-  <!-- Apuestas -->
   <div id="betting-zone">
     <div>
       <div class="bet-section-title">Apuesta Principal</div>
@@ -315,7 +327,6 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <div id="waiting-txt"></div>
   </div>
 
-  <!-- Acciones -->
   <div id="actions">
     <button class="btn-act btn-hit" id="btn-hit">Pedir</button>
     <button class="btn-act btn-stand" id="btn-stand">Plantarse</button>
@@ -324,7 +335,6 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <button class="btn-act btn-surr" id="btn-surr">Rendirse</button>
   </div>
 
-  <!-- Chat -->
   <div id="chat-box">
     <div id="chat-log"></div>
     <div class="chat-inp">
@@ -334,18 +344,48 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   </div>
 </div>
 
-<!-- Modales recompra -->
-<div id="rebuy-overlay"><div id="rebuy-panel"><h3>💰 Solicitar Recompra</h3><p>Tu saldo actual: <strong id="rebuy-current-bal">$0</strong></p><div class="bet-section-title" style="margin:.8rem 0 .5rem">Selecciona monto:</div><div class="chips" id="rebuy-chips" style="justify-content:center"><div class="chip" data-rebuy="100">$100</div><div class="chip" data-rebuy="500">$500</div><div class="chip" data-rebuy="1000">$1000</div><div class="chip" data-rebuy="2000">$2000</div><div class="chip" data-rebuy="5000">$5000</div><div class="chip" data-rebuy="10000">$10000</div></div><div style="margin:.5rem 0;text-align:center"><span id="rebuy-amount-display" style="color:var(--gold);font-weight:bold">$0</span></div><div class="ins-btns" style="margin-top:.5rem"><button class="btn-gold" id="rebuy-request-btn">Solicitar Recompra</button><button class="btn-sm" id="rebuy-cancel">Cancelar</button></div><div id="rebuy-err"></div></div></div>
-<div id="vote-overlay"><div id="vote-panel"><h3>🗳️ Votación de Recompra</h3><p id="vote-player-name"></p><p id="vote-amount" style="color:var(--gold);font-weight:bold"></p><p style="font-size:.8rem;margin:.5rem 0">¿Apruebas que este jugador compre fichas?</p><div class="ins-btns"><button class="btn-ins-yes" id="vote-yes">✅ Aprobar</button><button class="btn-ins-no" id="vote-no">❌ Rechazar</button></div><div id="vote-waiting"></div></div></div>
+<!-- Modal recompra -->
+<div id="rebuy-modal">
+  <div id="rebuy-panel">
+    <h3>💰 Comprar Fichas</h3>
+    <p>Tu saldo actual: <strong id="rebuy-current-bal">$0</strong></p>
+    <div class="bet-section-title" style="margin:.8rem 0 .5rem">Selecciona monto:</div>
+    <div class="chips" id="rebuy-chips" style="justify-content:center">
+      <div class="chip" data-rebuy="100">$100</div>
+      <div class="chip" data-rebuy="500">$500</div>
+      <div class="chip" data-rebuy="1000">$1000</div>
+      <div class="chip" data-rebuy="2000">$2000</div>
+      <div class="chip" data-rebuy="5000">$5000</div>
+      <div class="chip" data-rebuy="10000">$10000</div>
+    </div>
+    <div style="margin:.5rem 0;text-align:center">
+      <span id="rebuy-amount-display" style="color:var(--gold);font-weight:bold">$0</span>
+    </div>
+    <div class="ins-btns" style="margin-top:.5rem">
+      <button class="btn-gold" id="rebuy-confirm">Comprar</button>
+      <button class="btn-sm" id="rebuy-cancel">Cancelar</button>
+    </div>
+    <div id="rebuy-err" style="color:#e74c3c;font-size:.75rem;margin-top:.5rem"></div>
+  </div>
+</div>
 
 <button id="rules-btn">📖 Reglas</button>
-<div id="rules-overlay"><div id="rules-panel"><div class="rules-header"><h2>📖 Reglas</h2><button id="rules-close">✕ Cerrar</button></div><details class="rules-section" open><summary>🎯 Objetivo del Juego</summary><div class="rules-body">Llega a <strong>21 puntos</strong> o acércate lo más posible <em>sin pasarte</em>, superando el valor de la mano del dealer (en casino) o de los demás jugadores (en torneo).</div></details><details class="rules-section"><summary>🃏 Valor de las Cartas</summary><div class="rules-body"><ul><li><strong>2–10:</strong> Valor numérico</li><li><strong>J,Q,K:</strong> 10 puntos</li><li><strong>As:</strong> 11 ó 1</li></ul></div></details><details class="rules-section"><summary>🛡️ Seguro</summary><div class="rules-body">En modo Casino, si el dealer muestra un <strong>As, 10, J, Q o K</strong>, puedes contratar seguro (mitad de tu apuesta). Si el dealer tiene Blackjack, el seguro paga 2:1.</div></details><details class="rules-section"><summary>🏆 Modo Torneo</summary><div class="rules-body">Los jugadores compiten entre sí. El dealer solo reparte y no participa. Gana la mejor mano (sin pasarse de 21) y se lleva las apuestas de los perdedores.</div></details></div></div>
+<div id="rules-overlay">
+<div id="rules-panel">
+  <div class="rules-header">
+    <h2>📖 Reglas</h2>
+    <button id="rules-close">✕ Cerrar</button>
+  </div>
+  <details class="rules-section" open><summary>🎯 Objetivo del Juego</summary><div class="rules-body">Llega a <strong>21 puntos</strong> o acércate lo más posible <em>sin pasarte</em>.</div></details>
+  <details class="rules-section"><summary>🃏 Valor de las Cartas</summary><div class="rules-body"><ul><li><strong>2–10:</strong> Valor numérico</li><li><strong>J,Q,K:</strong> 10 puntos</li><li><strong>As:</strong> 11 ó 1</li></ul></div></details>
+  <details class="rules-section"><summary>🛡️ Seguro</summary><div class="rules-body">En modo Casino, si el dealer muestra un <strong>As, 10, J, Q o K</strong>, puedes contratar seguro (mitad de tu apuesta). Si el dealer tiene Blackjack, el seguro paga 2:1.</div></details>
+  <details class="rules-section"><summary>🏆 Modo Torneo</summary><div class="rules-body">Los jugadores compiten entre sí. El dealer solo reparte. Las apuestas se acumulan y se reparten: <strong>50% para el 1º, 30% para el 2º, 20% para el 3º</strong> (según la mano más cercana a 21 sin pasarse).</div></details>
+</div>
+</div>
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  ESTADO LOCAL
-// ═══════════════════════════════════════════════════════════════
+// ==================== ESTADO LOCAL ====================
 let ws, myId, gameState = null;
 let bets = { main: 0, pp: 0, s21: 0 };
 let selectedStartAmount = 1000;
@@ -367,7 +407,9 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function cardHTML(c, sm = false) {
   if (c.suit === '?') return `<div class="card back ${sm?'sm':''}"></div>`;
   const red = c.suit==='♥'||c.suit==='♦';
-  return `<div class="card ${red?'red':'black'} ${sm?'sm':''}"><div class="cr">${esc(c.rank)}</div><div class="cs">${esc(c.suit)}</div></div>`;
+  return `<div class="card ${red?'red':'black'} ${sm?'sm':''}">
+    <div class="cr">${esc(c.rank)}</div><div class="cs">${esc(c.suit)}</div>
+  </div>`;
 }
 function handHTML(cards, sm = false) { return cards.map(c => cardHTML(c, sm)).join(''); }
 
@@ -435,7 +477,6 @@ function render(s) {
     grid.appendChild(el);
   }
 
-  // Zona seguro (solo en casino y cuando dealer tiene A o 10/J/Q/K)
   const insZone = document.getElementById('insurance-zone');
   const myInsDecided = me && me.insuranceDecided;
   if (s.phase === 'insurance' && me && !myInsDecided && s.gameMode === 'casino') {
@@ -570,8 +611,8 @@ document.querySelectorAll('#start-chips .chip').forEach(chip => {
 document.querySelector('#start-chips .chip[data-start="1000"]').style.opacity = '1';
 
 const modeInfo = {
-  casino: '🎰 Modo Casino: Ganas si tu mano supera al dealer. El dealer paga las ganancias. Seguro disponible con As, 10, J, Q, K.',
-  tournament: '🏆 Modo Torneo: Compites contra otros jugadores. El que tiene mejor mano gana las apuestas de los perdedores. ¡El dealer solo reparte!'
+  casino: '🎰 Modo Casino: Ganas si tu mano supera al dealer. Seguro con As, 10, J, Q, K.',
+  tournament: '🏆 Modo Torneo: Compites contra otros jugadores. El que tiene mejor mano gana. Premios: 1º 50%, 2º 30%, 3º 20% del pozo.'
 };
 document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
   radio.addEventListener('change', (e) => {
@@ -580,6 +621,7 @@ document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
   });
 });
 
+// Recompra simple (sin votación)
 function initRebuyUI() {
   const rebuyChips = document.querySelectorAll('#rebuy-chips .chip');
   rebuyChips.forEach(chip => {
@@ -591,16 +633,18 @@ function initRebuyUI() {
       document.getElementById('rebuy-err').textContent = '';
     });
   });
-  document.getElementById('rebuy-request-btn')?.addEventListener('click', () => {
+  document.getElementById('rebuy-confirm')?.addEventListener('click', () => {
     if (rebuyAmount < 100) { document.getElementById('rebuy-err').textContent = 'Selecciona un monto'; return; }
-    ws.send(JSON.stringify({ type: 'rebuy_request', amount: rebuyAmount }));
-    document.getElementById('rebuy-overlay').classList.remove('open');
+    ws.send(JSON.stringify({ type: 'rebuy', amount: rebuyAmount }));
+    document.getElementById('rebuy-modal').classList.remove('open');
     rebuyAmount = 0;
     document.getElementById('rebuy-amount-display').textContent = '$0';
     rebuyChips.forEach(c => c.style.opacity = '0.6');
-    showToast('Solicitud enviada. Esperando votación...');
+    showToast('Solicitando recompra...');
   });
-  document.getElementById('rebuy-cancel')?.addEventListener('click', () => document.getElementById('rebuy-overlay').classList.remove('open'));
+  document.getElementById('rebuy-cancel')?.addEventListener('click', () => {
+    document.getElementById('rebuy-modal').classList.remove('open');
+  });
 }
 const rebuyBtn = document.createElement('button');
 rebuyBtn.textContent = '💰 Comprar Fichas';
@@ -611,20 +655,9 @@ rebuyBtn.addEventListener('click', () => {
   if (gameState && (gameState.phase === 'betting' || gameState.phase === 'lobby')) {
     const currentBal = gameState.players[myId]?.balance || 0;
     document.getElementById('rebuy-current-bal').textContent = `$${currentBal}`;
-    document.getElementById('rebuy-overlay').classList.add('open');
+    document.getElementById('rebuy-modal').classList.add('open');
   } else { showToast('Solo puedes comprar fichas entre rondas'); }
 });
-
-function initVoteUI() {
-  document.getElementById('vote-yes')?.addEventListener('click', () => { ws.send(JSON.stringify({ type: 'rebuy_vote', approve: true })); document.getElementById('vote-overlay').classList.remove('open'); });
-  document.getElementById('vote-no')?.addEventListener('click', () => { ws.send(JSON.stringify({ type: 'rebuy_vote', approve: false })); document.getElementById('vote-overlay').classList.remove('open'); });
-}
-function handleVoteRequest(data) {
-  document.getElementById('vote-player-name').textContent = `${data.playerName} quiere comprar fichas`;
-  document.getElementById('vote-amount').textContent = `$${data.amount}`;
-  document.getElementById('vote-waiting').textContent = '';
-  document.getElementById('vote-overlay').classList.add('open');
-}
 
 function connect(name, startAmount, gameMode) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -641,13 +674,18 @@ function connect(name, startAmount, gameMode) {
         rebuyBtn.classList.add('rebuy-btn-added');
         barHeader.appendChild(rebuyBtn);
       }
-    } else if (msg.type === 'state') { gameState = msg.state; render(msg.state);
-    } else if (msg.type === 'chat') { addChat(msg.text, msg.system);
-    } else if (msg.type === 'error') { document.getElementById('lobby-err').textContent = msg.text; document.getElementById('join-btn').disabled = false;
-    } else if (msg.type === 'rebuy_vote_request') { handleVoteRequest(msg);
-    } else if (msg.type === 'rebuy_complete') { showToast(`✅ Recompra exitosa! +$${msg.amount}`);
-    } else if (msg.type === 'rebuy_denied') { showToast(`❌ Tu solicitud de recompra fue rechazada`);
-    } else if (msg.type === 'rebuy_vote_closed') { if (!msg.approved) showToast(`La votación de recompra terminó sin aprobación`); }
+    } else if (msg.type === 'state') {
+      gameState = msg.state; render(msg.state);
+    } else if (msg.type === 'chat') {
+      addChat(msg.text, msg.system);
+    } else if (msg.type === 'error') {
+      document.getElementById('lobby-err').textContent = msg.text;
+      document.getElementById('join-btn').disabled = false;
+    } else if (msg.type === 'rebuy_success') {
+      showToast(`✅ Recompra exitosa! +$${msg.amount}`);
+    } else if (msg.type === 'rebuy_failed') {
+      showToast(`❌ No se pudo completar la recompra`);
+    }
   };
   ws.onclose = () => showToast('Desconectado — recarga la página');
 }
@@ -662,7 +700,6 @@ function tryJoin() {
 document.getElementById('join-btn')?.addEventListener('click', tryJoin);
 document.getElementById('name-in')?.addEventListener('keydown', e => { if (e.key==='Enter') tryJoin(); });
 initRebuyUI();
-initVoteUI();
 </script>
 </body>
 </html>
