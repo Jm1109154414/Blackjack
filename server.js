@@ -15,12 +15,12 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
-// Montos permitidos
 const ALLOWED_START_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
 const ALLOWED_REBUY_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
 
 let state = {
   phase: 'lobby',
+  gameMode: 'casino',
   players: {},
   dealer: { hand: [] },
   deck: [],
@@ -111,7 +111,7 @@ function publicState(hideHole = true) {
   const dealerHand = showHole ? state.dealer.hand
     : state.dealer.hand.length>0 ? [state.dealer.hand[0],{suit:'?',rank:'?'}] : [];
   return {
-    phase:state.phase, players,
+    phase:state.phase, gameMode: state.gameMode, players,
     dealer:{ hand:dealerHand, value: showHole ? handValue(state.dealer.hand) : null },
     order:state.order,
     currentPlayerIdx:state.currentPlayerIdx, currentHandIdx:state.currentHandIdx,
@@ -132,7 +132,6 @@ function broadcast(msg) {
     if (ws && ws.readyState===WebSocket.OPEN) ws.send(data);
   }
 }
-
 function sendState(hideHole=true) { broadcast({type:'state',state:publicState(hideHole)}); }
 function chat(text,system=true) { broadcast({type:'chat',text,system}); }
 function toPlayer(id, msg) { 
@@ -179,7 +178,10 @@ function startRound() {
     }
     if (handValue([c1,c2])===21) p.hands[0].status='blackjack';
   }
-  if (dUp.rank==='A') {
+  // Seguro mejorado: se ofrece si la carta visible es As o cualquier carta de valor 10 (10,J,Q,K)
+  const upRank = dUp.rank;
+  const isTenValue = ['10','J','Q','K'].includes(upRank);
+  if (state.gameMode === 'casino' && (upRank === 'A' || isTenValue)) {
     state.phase='insurance'; sendState(true);
     state.insuranceTimer=setTimeout(resolveInsurance,15000);
   } else {
@@ -228,13 +230,18 @@ function advanceToNextHand() {
 
 function dealerTurn() {
   state.phase='dealer'; sendState(false);
+  if (state.gameMode === 'tournament') {
+    chat('🏆 Modo Torneo: El dealer solo reparte. Los jugadores compiten entre sí.');
+    setTimeout(() => resolveRoundTournament(), 2000);
+    return;
+  }
   const tick=setInterval(()=>{
     if (handValue(state.dealer.hand)<17) { state.dealer.hand.push(draw()); sendState(false); }
-    else { clearInterval(tick); resolveRound(); }
+    else { clearInterval(tick); resolveRoundCasino(); }
   },950);
 }
 
-function resolveRound() {
+function resolveRoundCasino() {
   state.phase='results';
   const dv=handValue(state.dealer.hand); const dealerBust=dv>21;
   for (const id of state.order) {
@@ -251,6 +258,73 @@ function resolveRound() {
   sendState(false); scheduleNextBetting();
 }
 
+function resolveRoundTournament() {
+  state.phase='results';
+  const activePlayers = [];
+  for (const id of state.order) {
+    const p = state.players[id];
+    if (!p) continue;
+    for (let hIdx = 0; hIdx < p.hands.length; hIdx++) {
+      const hand = p.hands[hIdx];
+      const pv = handValue(hand.cards);
+      if (hand.status === 'bust' || hand.status === 'surrender') {
+        hand.status = hand.status === 'bust' ? 'bust' : 'surrender';
+        continue;
+      }
+      activePlayers.push({
+        id, playerId: id, player: p, handIdx: hIdx, hand, value: pv,
+        isBlackjack: hand.status === 'blackjack',
+        isBust: pv > 21
+      });
+    }
+  }
+  activePlayers.sort((a, b) => {
+    if (a.isBust && !b.isBust) return 1;
+    if (!a.isBust && b.isBust) return -1;
+    if (a.isBlackjack && !b.isBlackjack) return -1;
+    if (!a.isBlackjack && b.isBlackjack) return 1;
+    return b.value - a.value;
+  });
+  const winners = [];
+  let bestValue = -1;
+  let bestIsBlackjack = false;
+  for (const player of activePlayers) {
+    if (player.isBust) continue;
+    if (bestValue === -1) {
+      bestValue = player.value;
+      bestIsBlackjack = player.isBlackjack;
+      winners.push(player);
+    } else if (player.value === bestValue && player.isBlackjack === bestIsBlackjack) {
+      winners.push(player);
+    } else break;
+  }
+  if (winners.length === 0) {
+    chat('💀 ¡Todos los jugadores se pasaron de 21! Nadie gana esta ronda.');
+    for (const p of activePlayers) p.hand.status = 'lose';
+    sendState(false);
+    scheduleNextBetting();
+    return;
+  }
+  let totalPot = 0;
+  const losers = activePlayers.filter(p => !winners.includes(p));
+  for (const player of activePlayers) totalPot += player.hand.bet;
+  const totalWinnerBets = winners.reduce((sum, w) => sum + w.hand.bet, 0);
+  for (const winner of winners) {
+    const winAmount = Math.floor((winner.hand.bet / totalWinnerBets) * totalPot);
+    winner.player.balance += winAmount;
+    winner.hand.status = 'win';
+    winner.hand.winAmount = winAmount;
+    chat(`🏆 ${winner.player.name} gana $${winAmount} con ${winner.value} puntos!`);
+  }
+  for (const loser of losers) {
+    loser.hand.status = 'lose';
+  }
+  const dealerValue = handValue(state.dealer.hand);
+  chat(`📊 Mano del dealer: ${dealerValue} puntos (solo referencia)`);
+  sendState(false);
+  scheduleNextBetting();
+}
+
 function scheduleNextBetting() {
   setTimeout(()=>{
     state.phase='betting';
@@ -264,21 +338,19 @@ function scheduleNextBetting() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  VOTACIÓN DE RECOMPRA
+//  VOTACIÓN DE RECOMPRA (completa)
 // ═══════════════════════════════════════════════════════════════
 function startRebuyVote(playerId, amount) {
   if (state.pendingRebuy) {
     toPlayer(playerId, { type: 'error', text: 'Ya hay una votación de recompra en curso' });
     return;
   }
-  
   const player = state.players[playerId];
   if (!player) return;
   if (!ALLOWED_REBUY_AMOUNTS.includes(amount)) {
     toPlayer(playerId, { type: 'error', text: 'Monto no válido' });
     return;
   }
-  
   const otherPlayers = Object.keys(state.players).filter(id => id !== playerId);
   if (otherPlayers.length === 0) {
     player.balance += amount;
@@ -287,16 +359,13 @@ function startRebuyVote(playerId, amount) {
     sendState();
     return;
   }
-  
   state.pendingRebuy = {
     playerId,
     amount,
     votes: {},
     voters: [...otherPlayers]
   };
-  
   chat(`🗳️ ${player.name} solicita comprar $${amount} en fichas. Votación iniciada.`);
-  
   for (const voterId of otherPlayers) {
     toPlayer(voterId, {
       type: 'rebuy_vote_request',
@@ -304,27 +373,22 @@ function startRebuyVote(playerId, amount) {
       amount,
     });
   }
-  
   setTimeout(() => {
     if (state.pendingRebuy && state.pendingRebuy.playerId === playerId) {
       resolveRebuyVote();
     }
   }, 30000);
-  
   sendState();
 }
 
 function resolveRebuyVote() {
   if (!state.pendingRebuy) return;
-  
   const { playerId, amount, votes, voters } = state.pendingRebuy;
   const player = state.players[playerId];
   const totalVoters = voters.length;
   const yesVotes = Object.values(votes).filter(v => v === true).length;
   const noVotes = Object.values(votes).filter(v => v === false).length;
-  
   const approved = yesVotes > noVotes;
-  
   if (approved && player) {
     player.balance += amount;
     chat(`✅ ${player.name} compró $${amount} en fichas (Aprobado: ${yesVotes}/${totalVoters})`);
@@ -333,11 +397,9 @@ function resolveRebuyVote() {
     chat(`❌ Rechazada recompra de ${player.name} por $${amount} (${yesVotes} sí, ${noVotes} no)`);
     toPlayer(playerId, { type: 'rebuy_denied' });
   }
-  
   for (const voterId of voters) {
     toPlayer(voterId, { type: 'rebuy_vote_closed', approved });
   }
-  
   state.pendingRebuy = null;
   sendState();
 }
@@ -352,16 +414,12 @@ function castVote(voterId, approve) {
     return;
   }
   if (!state.pendingRebuy.voters.includes(voterId)) return;
-  
   state.pendingRebuy.votes[voterId] = approve;
   toPlayer(voterId, { type: 'vote_cast', approve });
-  
   chat(`${state.players[voterId]?.name} ${approve ? 'aprobó' : 'rechazó'} la recompra de ${state.players[state.pendingRebuy.playerId]?.name}`);
-  
   if (Object.keys(state.pendingRebuy.votes).length === state.pendingRebuy.voters.length) {
     resolveRebuyVote();
   }
-  
   sendState();
 }
 
@@ -382,6 +440,14 @@ wss.on('connection',(ws)=>{
       const startAmount = parseInt(msg.startAmount);
       if (!ALLOWED_START_AMOUNTS.includes(startAmount)) {
         ws.send(JSON.stringify({type:'error',text:'Monto inicial no válido'}));
+        return;
+      }
+      const requestedMode = msg.gameMode || 'casino';
+      if (Object.keys(state.players).length === 0) {
+        state.gameMode = requestedMode;
+        chat(`🎮 Modo de juego: ${state.gameMode === 'casino' ? 'Casino (vs Dealer)' : 'Torneo (Jugadores vs Jugadores)'}`);
+      } else if (state.gameMode !== requestedMode) {
+        ws.send(JSON.stringify({type:'error',text:`El juego ya está en modo ${state.gameMode === 'casino' ? 'Casino' : 'Torneo'}. No puedes cambiarlo.`}));
         return;
       }
       myId=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`;
@@ -407,6 +473,7 @@ wss.on('connection',(ws)=>{
     }
     
     if (msg.type==='insurance') {
+      if (state.gameMode !== 'casino') return;
       if (state.phase!=='insurance'||player.insuranceDecided) return;
       player.insuranceDecided=true;
       if (msg.take) {
@@ -480,14 +547,15 @@ wss.on('connection',(ws)=>{
   });
 });
 
-const PORT=3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT,()=>{
   const {networkInterfaces}=require('os');
   console.log(`\n🃏  Blackjack Multijugador\n${'─'.repeat(40)}`);
+  console.log(`   Modo: ${state.gameMode === 'casino' ? 'Casino (vs Dealer)' : 'Torneo (Jugadores vs Jugadores)'}`);
   console.log(`   Local:   http://localhost:${PORT}`);
   for (const name of Object.keys(networkInterfaces()))
     for (const net of networkInterfaces()[name])
       if (net.family==='IPv4'&&!net.internal)
-        console.log(`   Red LAN: http://${net.address}:${PORT}  ← comparte esta URL`);
+        console.log(`   Red LAN: http://${net.address}:${PORT}`);
   console.log(`${'─'.repeat(40)}\n`);
 });
