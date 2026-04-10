@@ -15,6 +15,10 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
+// Montos permitidos
+const ALLOWED_START_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+const ALLOWED_REBUY_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+
 let state = {
   phase: 'lobby',
   players: {},
@@ -24,6 +28,7 @@ let state = {
   currentPlayerIdx: 0,
   currentHandIdx: 0,
   insuranceTimer: null,
+  pendingRebuy: null,
 };
 
 function createDeck() {
@@ -111,6 +116,12 @@ function publicState(hideHole = true) {
     order:state.order,
     currentPlayerIdx:state.currentPlayerIdx, currentHandIdx:state.currentHandIdx,
     currentPlayerId:state.order[state.currentPlayerIdx]||null,
+    pendingRebuy: state.pendingRebuy ? {
+      playerId: state.pendingRebuy.playerId,
+      playerName: state.players[state.pendingRebuy.playerId]?.name,
+      amount: state.pendingRebuy.amount,
+      votes: state.pendingRebuy.votes
+    } : null
   };
 }
 
@@ -121,8 +132,14 @@ function broadcast(msg) {
     if (ws && ws.readyState===WebSocket.OPEN) ws.send(data);
   }
 }
+
 function sendState(hideHole=true) { broadcast({type:'state',state:publicState(hideHole)}); }
 function chat(text,system=true) { broadcast({type:'chat',text,system}); }
+function toPlayer(id, msg) { 
+  const ws = state.players[id]?.ws;
+  if (ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
 function allReady() {
   const ps = Object.values(state.players);
   return ps.length>0 && ps.every(p=>p.status==='ready');
@@ -246,30 +263,149 @@ function scheduleNextBetting() {
   },7000);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  VOTACIÓN DE RECOMPRA
+// ═══════════════════════════════════════════════════════════════
+function startRebuyVote(playerId, amount) {
+  if (state.pendingRebuy) {
+    toPlayer(playerId, { type: 'error', text: 'Ya hay una votación de recompra en curso' });
+    return;
+  }
+  
+  const player = state.players[playerId];
+  if (!player) return;
+  if (!ALLOWED_REBUY_AMOUNTS.includes(amount)) {
+    toPlayer(playerId, { type: 'error', text: 'Monto no válido' });
+    return;
+  }
+  
+  const otherPlayers = Object.keys(state.players).filter(id => id !== playerId);
+  if (otherPlayers.length === 0) {
+    player.balance += amount;
+    chat(`${player.name} compró $${amount} en fichas (sin otros jugadores)`);
+    toPlayer(playerId, { type: 'rebuy_complete', amount });
+    sendState();
+    return;
+  }
+  
+  state.pendingRebuy = {
+    playerId,
+    amount,
+    votes: {},
+    voters: [...otherPlayers]
+  };
+  
+  chat(`🗳️ ${player.name} solicita comprar $${amount} en fichas. Votación iniciada.`);
+  
+  for (const voterId of otherPlayers) {
+    toPlayer(voterId, {
+      type: 'rebuy_vote_request',
+      playerName: player.name,
+      amount,
+    });
+  }
+  
+  setTimeout(() => {
+    if (state.pendingRebuy && state.pendingRebuy.playerId === playerId) {
+      resolveRebuyVote();
+    }
+  }, 30000);
+  
+  sendState();
+}
+
+function resolveRebuyVote() {
+  if (!state.pendingRebuy) return;
+  
+  const { playerId, amount, votes, voters } = state.pendingRebuy;
+  const player = state.players[playerId];
+  const totalVoters = voters.length;
+  const yesVotes = Object.values(votes).filter(v => v === true).length;
+  const noVotes = Object.values(votes).filter(v => v === false).length;
+  
+  const approved = yesVotes > noVotes;
+  
+  if (approved && player) {
+    player.balance += amount;
+    chat(`✅ ${player.name} compró $${amount} en fichas (Aprobado: ${yesVotes}/${totalVoters})`);
+    toPlayer(playerId, { type: 'rebuy_complete', amount });
+  } else if (player) {
+    chat(`❌ Rechazada recompra de ${player.name} por $${amount} (${yesVotes} sí, ${noVotes} no)`);
+    toPlayer(playerId, { type: 'rebuy_denied' });
+  }
+  
+  for (const voterId of voters) {
+    toPlayer(voterId, { type: 'rebuy_vote_closed', approved });
+  }
+  
+  state.pendingRebuy = null;
+  sendState();
+}
+
+function castVote(voterId, approve) {
+  if (!state.pendingRebuy) {
+    toPlayer(voterId, { type: 'error', text: 'No hay votación activa' });
+    return;
+  }
+  if (state.pendingRebuy.votes[voterId] !== undefined) {
+    toPlayer(voterId, { type: 'error', text: 'Ya votaste' });
+    return;
+  }
+  if (!state.pendingRebuy.voters.includes(voterId)) return;
+  
+  state.pendingRebuy.votes[voterId] = approve;
+  toPlayer(voterId, { type: 'vote_cast', approve });
+  
+  chat(`${state.players[voterId]?.name} ${approve ? 'aprobó' : 'rechazó'} la recompra de ${state.players[state.pendingRebuy.playerId]?.name}`);
+  
+  if (Object.keys(state.pendingRebuy.votes).length === state.pendingRebuy.voters.length) {
+    resolveRebuyVote();
+  }
+  
+  sendState();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WEBSOCKET CONNECTION
+// ═══════════════════════════════════════════════════════════════
 wss.on('connection',(ws)=>{
   let myId=null;
   ws.on('message',(raw)=>{
     let msg; try{msg=JSON.parse(raw);}catch{return;}
+    
     if (msg.type==='join') {
-      if (Object.keys(state.players).length>=5) { ws.send(JSON.stringify({type:'error',text:'Mesa llena (máx 5)'})); return; }
+      if (Object.keys(state.players).length>=5) { 
+        ws.send(JSON.stringify({type:'error',text:'Mesa llena (máx 5)'})); 
+        return; 
+      }
       const name=String(msg.name||'Jugador').slice(0,16).trim()||'Jugador';
+      const startAmount = parseInt(msg.startAmount);
+      if (!ALLOWED_START_AMOUNTS.includes(startAmount)) {
+        ws.send(JSON.stringify({type:'error',text:'Monto inicial no válido'}));
+        return;
+      }
       myId=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`;
-      state.players[myId]={id:myId,name,balance:1000,ws,status:'waiting',hands:[],pendingBet:0,
+      state.players[myId]={id:myId,name,balance:startAmount,ws,status:'waiting',hands:[],pendingBet:0,
         sidebet21_3:0,sidebetPP:0,result21_3:null,resultPP:null,insuranceBet:0,insuranceDecided:false,currentHandIdx:0};
-      ws.send(JSON.stringify({type:'joined',id:myId}));
+      ws.send(JSON.stringify({type:'joined',id:myId,balance:startAmount}));
       if (state.phase==='lobby') state.phase='betting';
-      sendState(); chat(`${name} se unió a la mesa 🃏`); return;
+      sendState(); chat(`${name} se unió a la mesa con $${startAmount} 🃏`); 
+      return;
     }
+    
     if (!myId||!state.players[myId]) return;
     const player=state.players[myId];
+    
     if (msg.type==='bet') {
       if (state.phase!=='betting'||player.status==='ready') return;
       const main=parseInt(msg.main)||0, pp=parseInt(msg.pp)||0, s21=parseInt(msg.s21)||0;
       if (main<1||(main+pp+s21)>player.balance) return;
       player.balance-=(main+pp+s21); player.pendingBet=main; player.sidebetPP=pp; player.sidebet21_3=s21; player.status='ready';
       let t=`${player.name} apostó $${main}`; if(pp>0)t+=` · PP $${pp}`; if(s21>0)t+=` · 21+3 $${s21}`; chat(t);
-      if (allReady()) setTimeout(startRound,1200); else sendState(); return;
+      if (allReady()) setTimeout(startRound,1200); else sendState(); 
+      return;
     }
+    
     if (msg.type==='insurance') {
       if (state.phase!=='insurance'||player.insuranceDecided) return;
       player.insuranceDecided=true;
@@ -277,9 +413,31 @@ wss.on('connection',(ws)=>{
         const ib=Math.ceil((player.hands[0]?.bet||0)/2);
         if (player.balance>=ib) { player.balance-=ib; player.insuranceBet=ib; chat(`${player.name} tomó seguro ($${ib})`); }
       } else chat(`${player.name} rechazó el seguro`);
-      if (Object.values(state.players).every(p=>p.insuranceDecided)) resolveInsurance(); else sendState(); return;
+      if (Object.values(state.players).every(p=>p.insuranceDecided)) resolveInsurance(); else sendState(); 
+      return;
     }
-    if (msg.type==='chat') { const t=String(msg.text||'').slice(0,120).trim(); if(t)broadcast({type:'chat',text:`${player.name}: ${t}`,system:false}); return; }
+    
+    if (msg.type==='rebuy_request') {
+      if (state.phase !== 'betting' && state.phase !== 'lobby') {
+        toPlayer(myId, { type: 'error', text: 'Solo puedes comprar fichas entre rondas' });
+        return;
+      }
+      const amount = parseInt(msg.amount);
+      startRebuyVote(myId, amount);
+      return;
+    }
+    
+    if (msg.type==='rebuy_vote') {
+      castVote(myId, msg.approve);
+      return;
+    }
+    
+    if (msg.type==='chat') { 
+      const t=String(msg.text||'').slice(0,120).trim(); 
+      if(t) broadcast({type:'chat',text:`${player.name}: ${t}`,system:false}); 
+      return; 
+    }
+    
     if (!['hit','stand','double','split','surrender'].includes(msg.type)) return;
     if (state.phase!=='playing'||state.order[state.currentPlayerIdx]!==myId) return;
     const hand=player.hands[state.currentHandIdx];
@@ -310,6 +468,7 @@ wss.on('connection',(ws)=>{
       player.balance+=Math.floor(hand.bet/2); hand.status='surrender'; state.currentHandIdx++; advanceToNextHand();
     }
   });
+  
   ws.on('close',()=>{
     if (myId&&state.players[myId]) {
       const name=state.players[myId].name; delete state.players[myId]; chat(`${name} dejó la mesa`);

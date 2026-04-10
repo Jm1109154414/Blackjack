@@ -19,7 +19,7 @@ html,body{height:100%;background:radial-gradient(ellipse at 50% 20%,#0d2417 0%,v
   color:var(--cream);font-family:'Cinzel',serif;overflow-x:hidden}
 body{display:flex;flex-direction:column;align-items:center;min-height:100vh}
 
-/* ═══════ LOBBY ═══════════════════════════════════════════════ */
+/* ═══════ LOBBY ═══════════════════════════════════════════════════ */
 #lobby{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   background:radial-gradient(ellipse at 50% 35%,#0d2417,#020a04)}
@@ -239,6 +239,24 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.25);border-radius:2px}
+
+/* ═══════ MODAL RECOMPRA ═══════════════════════════════════════ */
+#rebuy-overlay, #vote-overlay {
+  position:fixed; inset:0; z-index:450; display:none;
+  background:rgba(0,0,0,.85); align-items:center; justify-content:center;
+}
+#rebuy-overlay.open, #vote-overlay.open { display:flex; }
+#rebuy-panel, #vote-panel {
+  background:linear-gradient(180deg,#0a1e0d,#071208);
+  border:2px solid var(--gold3); border-radius:16px;
+  padding:1.5rem; width:min(400px,90%); text-align:center;
+  box-shadow:var(--shadow);
+}
+#rebuy-panel h3, #vote-panel h3 {
+  font-family:'Cinzel Decorative',cursive; color:var(--gold);
+  margin-bottom:.5rem;
+}
+#rebuy-panel p, #vote-panel p { font-size:.85rem; color:var(--cream2); }
 </style>
 </head>
 <body>
@@ -249,7 +267,20 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   <p class="tagline">La suerte favorece a los audaces</p>
   <div class="lcard">
     <div><label>Tu nombre</label><input id="name-in" maxlength="16" placeholder="Escribe tu nombre…" autofocus/></div>
-    <button class="btn-gold" id="join-btn">Entrar a la Mesa</button>
+    <div><label style="margin-top:0.8rem;display:block">Fichas iniciales</label>
+      <div class="chips" style="justify-content:center;margin-top:.5rem" id="start-chips">
+        <div class="chip" data-start="100">$100</div>
+        <div class="chip" data-start="500">$500</div>
+        <div class="chip" data-start="1000">$1000</div>
+        <div class="chip" data-start="2000">$2000</div>
+        <div class="chip" data-start="5000">$5000</div>
+        <div class="chip" data-start="10000">$10000</div>
+      </div>
+    </div>
+    <div style="margin-top:.5rem;text-align:center">
+      <span id="selected-start" style="color:var(--gold);font-weight:bold">$1000</span>
+    </div>
+    <button class="btn-gold" id="join-btn" style="margin-top:.8rem">Entrar a la Mesa</button>
     <div id="lobby-err"></div>
   </div>
 </div>
@@ -258,7 +289,7 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 <div id="table">
   <header class="bar">
     <div class="logo">♠ Blackjack</div>
-    <div id="my-balance">Fichas: <span id="bal-val">1000</span></div>
+    <div id="my-balance">Fichas: <span id="bal-val">0</span></div>
   </header>
 
   <div id="phase-banner">Esperando jugadores…</div>
@@ -363,6 +394,46 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
   </div>
 </div>
 
+<!-- ══ MODAL RECOMPRA ══════════════════════════════════════════ -->
+<div id="rebuy-overlay">
+  <div id="rebuy-panel">
+    <h3>💰 Solicitar Recompra</h3>
+    <p>Tu saldo actual: <strong id="rebuy-current-bal">$0</strong></p>
+    <div class="bet-section-title" style="margin:.8rem 0 .5rem">Selecciona monto:</div>
+    <div class="chips" id="rebuy-chips" style="justify-content:center">
+      <div class="chip" data-rebuy="100">$100</div>
+      <div class="chip" data-rebuy="500">$500</div>
+      <div class="chip" data-rebuy="1000">$1000</div>
+      <div class="chip" data-rebuy="2000">$2000</div>
+      <div class="chip" data-rebuy="5000">$5000</div>
+      <div class="chip" data-rebuy="10000">$10000</div>
+    </div>
+    <div style="margin:.5rem 0;text-align:center">
+      <span id="rebuy-amount-display" style="color:var(--gold);font-weight:bold">$0</span>
+    </div>
+    <div class="ins-btns" style="margin-top:.5rem">
+      <button class="btn-gold" id="rebuy-request-btn">Solicitar Recompra</button>
+      <button class="btn-sm" id="rebuy-cancel">Cancelar</button>
+    </div>
+    <div id="rebuy-err" style="color:#e74c3c;font-size:.75rem;text-align:center;margin-top:.5rem"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL VOTACIÓN RECOMPRA ══════════════════════════════════ -->
+<div id="vote-overlay">
+  <div id="vote-panel">
+    <h3>🗳️ Votación de Recompra</h3>
+    <p id="vote-player-name"></p>
+    <p id="vote-amount" style="color:var(--gold);font-weight:bold"></p>
+    <p style="font-size:.8rem;margin:.5rem 0">¿Apruebas que este jugador compre fichas?</p>
+    <div class="ins-btns">
+      <button class="btn-ins-yes" id="vote-yes">✅ Aprobar</button>
+      <button class="btn-ins-no" id="vote-no">❌ Rechazar</button>
+    </div>
+    <div id="vote-waiting" style="font-size:.75rem;color:var(--cream2);margin-top:.8rem"></div>
+  </div>
+</div>
+
 <!-- ══ REGLAS BTN ═════════════════════════════════════════════ -->
 <button id="rules-btn">📖 Reglas</button>
 
@@ -373,147 +444,18 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
     <h2>📖 Reglas</h2>
     <button id="rules-close">✕ Cerrar</button>
   </div>
-
-  <details class="rules-section" open>
-    <summary>🎯 Objetivo del Juego</summary>
-    <div class="rules-body">
-      Llega a <strong>21 puntos</strong> o acércate lo más posible <em>sin pasarte</em>, superando el valor de la mano del dealer. Si te pasas de 21, pierdes automáticamente (<em>bust</em>). El dealer siempre se planta en <strong>17 o más</strong>.
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>🃏 Valor de las Cartas</summary>
-    <div class="rules-body">
-      <ul>
-        <li><strong>2 – 10:</strong> Su valor numérico</li>
-        <li><strong>J, Q, K:</strong> Valen 10 puntos</li>
-        <li><strong>As (A):</strong> Vale 11 ó 1 (lo que más convenga sin pasarse de 21)</li>
-      </ul>
-      Un <strong>Blackjack natural</strong> es un As + carta de 10 puntos en las primeras 2 cartas → paga <span class="hi">3:2</span>.
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>🔄 Desarrollo de una Ronda</summary>
-    <div class="rules-body">
-      <ol style="padding-left:1.2rem">
-        <li>Todos hacen su apuesta principal (y laterales si quieren)</li>
-        <li>Se reparten 2 cartas a cada jugador (boca arriba) y 2 al dealer (1 visible, 1 oculta)</li>
-        <li>Si el dealer muestra un <strong>As</strong>, se ofrece el <em>Seguro</em></li>
-        <li>Cada jugador actúa por turno: Pedir, Plantarse, Doblar, Dividir o Rendirse</li>
-        <li>El dealer revela su carta oculta y pide cartas hasta llegar a 17 o más</li>
-        <li>Se comparan manos y se pagan las apuestas</li>
-      </ol>
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>💥 Pedir Carta (Hit)</summary>
-    <div class="rules-body">
-      Pides una carta adicional. Puedes pedir tantas como quieras. Si tu total supera <strong>21</strong>, pierdes el turno automáticamente (<em>bust</em>).
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>✋ Plantarse (Stand)</summary>
-    <div class="rules-body">
-      Te quedas con tus cartas actuales y cedes el turno. El dealer procede con su mano una vez que todos los jugadores se hayan plantado o bust.
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>💰 Doble Apuesta (Double Down)</summary>
-    <div class="rules-body">
-      Disponible <strong>solo con tus 2 primeras cartas</strong>. Duplicas tu apuesta y recibes <em>exactamente una carta más</em>, luego te plantas automáticamente. Estratégicamente ideal con totales de 9, 10 u 11. Requiere tener fichas suficientes.
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>✂️ Dividir (Split)</summary>
-    <div class="rules-body">
-      Si tus 2 primeras cartas tienen el <strong>mismo valor</strong> (ej. dos 8s, dos Reinas, un Jack y un 10), puedes dividirlas en 2 manos independientes pagando la misma apuesta.
-      <ul style="margin-top:.5rem">
-        <li>Puedes volver a dividir hasta <strong>4 manos</strong> en total</li>
-        <li>Al dividir <strong>Ases</strong>: recibes solo 1 carta por As, sin más acción</li>
-        <li>As + 10 en mano dividida = <strong>21 normal</strong>, no Blackjack (paga 1:1)</li>
-        <li>Se puede doblar después de dividir (excepto Ases)</li>
-      </ul>
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>🏳️ Rendirse (Surrender)</summary>
-    <div class="rules-body">
-      Disponible <strong>solo como primera acción</strong> con tus 2 cartas iniciales (no disponible en manos divididas). Abandonas la mano y recuperas <strong>la mitad de tu apuesta</strong>. Útil cuando tienes 15 o 16 contra una carta fuerte del dealer (10, As).
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>🛡️ Seguro (Insurance)</summary>
-    <div class="rules-body">
-      Se ofrece cuando el <strong>dealer muestra un As</strong>. Puedes apostar hasta la <em>mitad de tu apuesta principal</em> a que el dealer tiene Blackjack.
-      <ul style="margin-top:.4rem">
-        <li>Si el dealer <em>tiene</em> Blackjack → el seguro paga <span class="hi">2:1</span> (recuperas apuesta principal + ganas el seguro)</li>
-        <li>Si el dealer <em>no tiene</em> Blackjack → pierdes la apuesta de seguro y continúa el juego</li>
-      </ul>
-      Nota: Estadísticamente es una apuesta desfavorable a largo plazo.
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>💎 Pagos Principales</summary>
-    <div class="rules-body">
-      <table class="payout-table">
-        <thead><tr><th>Resultado</th><th>Pago</th></tr></thead>
-        <tbody>
-          <tr><td>Blackjack natural (A + 10)</td><td class="hi">3:2</td></tr>
-          <tr><td>Ganar mano</td><td class="hi">1:1</td></tr>
-          <tr><td>Empate (Push)</td><td>Devuelve apuesta</td></tr>
-          <tr><td>Bust / Perder</td><td>Pierde apuesta</td></tr>
-          <tr><td>Rendirse</td><td>Recupera 50%</td></tr>
-          <tr><td>Seguro (dealer con BJ)</td><td class="hi">2:1</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>⭐ Apuesta Lateral: Perfect Pairs</summary>
-    <div class="rules-body">
-      Se apuesta <em>antes del reparto</em>. Ganas si tus <strong>2 primeras cartas forman un par</strong> (mismo rango). Se resuelve inmediatamente al repartir, independientemente del resultado de tu mano.
-      <table class="payout-table" style="margin-top:.5rem">
-        <thead><tr><th>Tipo de Par</th><th>Ejemplo</th><th>Pago</th></tr></thead>
-        <tbody>
-          <tr><td>Par Perfecto</td><td>7♥ + 7♥</td><td class="hi">25:1</td></tr>
-          <tr><td>Par de Color</td><td>7♥ + 7♦</td><td class="hi">12:1</td></tr>
-          <tr><td>Par Mixto</td><td>7♥ + 7♠</td><td class="hi">5:1</td></tr>
-        </tbody>
-      </table>
-      <p style="margin-top:.5rem;font-size:.76rem;opacity:.7">Par Perfecto: misma carta exacta (rango y palo). Par de Color: mismo rango y mismo color, diferente palo. Par Mixto: mismo rango, diferente color y palo.</p>
-    </div>
-  </details>
-
-  <details class="rules-section">
-    <summary>🎲 Apuesta Lateral: 21+3</summary>
-    <div class="rules-body">
-      Tus <strong>2 primeras cartas + la carta visible del dealer</strong> forman una mano de poker de 3 cartas. Se resuelve inmediatamente al repartir.
-      <table class="payout-table" style="margin-top:.5rem">
-        <thead><tr><th>Combinación</th><th>Descripción</th><th>Pago</th></tr></thead>
-        <tbody>
-          <tr><td>Trío de Palo</td><td>3 cartas iguales mismo palo</td><td class="hi">100:1</td></tr>
-          <tr><td>Escalera de Color</td><td>3 cartas consecutivas mismo palo</td><td class="hi">40:1</td></tr>
-          <tr><td>Trío</td><td>3 cartas del mismo rango</td><td class="hi">30:1</td></tr>
-          <tr><td>Escalera</td><td>3 cartas consecutivas (cualquier palo)</td><td class="hi">10:1</td></tr>
-          <tr><td>Color</td><td>3 cartas del mismo palo</td><td class="hi">5:1</td></tr>
-        </tbody>
-      </table>
-      <p style="margin-top:.5rem;font-size:.76rem;opacity:.7">Para escalera: A puede ser baja (A-2-3) o alta (Q-K-A). Las figuras J, Q, K son valores distintos entre sí.</p>
-    </div>
-  </details>
-
-  <div style="text-align:center;padding:1rem 0;font-family:'Lora',serif;font-style:italic;font-size:.75rem;color:var(--cream2);opacity:.5">
-    ¡Buena suerte en la mesa! 🃏
-  </div>
+  <details class="rules-section" open><summary>🎯 Objetivo del Juego</summary><div class="rules-body">Llega a <strong>21 puntos</strong> o acércate lo más posible <em>sin pasarte</em>, superando el valor de la mano del dealer.</div></details>
+  <details class="rules-section"><summary>🃏 Valor de las Cartas</summary><div class="rules-body"><ul><li><strong>2–10:</strong> Valor numérico</li><li><strong>J,Q,K:</strong> 10 puntos</li><li><strong>As:</strong> 11 ó 1</li></ul></div></details>
+  <details class="rules-section"><summary>🔄 Desarrollo</summary><div class="rules-body"><ol><li>Apuesta principal y laterales</li><li>Reparto 2 cartas a cada jugador y 2 al dealer (1 visible)</li><li>Si dealer muestra As → Seguro</li><li>Turnos: Pedir, Plantarse, Doblar, Dividir, Rendirse</li><li>Dealer pide hasta 17+</li><li>Comparar y pagar</li></ol></div></details>
+  <details class="rules-section"><summary>💥 Pedir Carta (Hit)</summary><div class="rules-body">Pides una carta adicional. Si superas 21, pierdes (<em>bust</em>).</div></details>
+  <details class="rules-section"><summary>✋ Plantarse (Stand)</summary><div class="rules-body">Te quedas con tus cartas actuales y cedes el turno.</div></details>
+  <details class="rules-section"><summary>💰 Doble (Double Down)</summary><div class="rules-body">Solo con 2 primeras cartas. Duplicas apuesta y recibes <em>exactamente una carta más</em>.</div></details>
+  <details class="rules-section"><summary>✂️ Dividir (Split)</summary><div class="rules-body">Si 2 primeras cartas mismo valor, puedes dividir. Máx 4 manos. Al dividir Ases: solo 1 carta por As.</div></details>
+  <details class="rules-section"><summary>🏳️ Rendirse (Surrender)</summary><div class="rules-body">Solo como primera acción. Recuperas la mitad de tu apuesta.</div></details>
+  <details class="rules-section"><summary>🛡️ Seguro (Insurance)</summary><div class="rules-body">Cuando dealer muestra As. Apuestas mitad de tu apuesta. Si dealer tiene BJ → paga 2:1.</div></details>
+  <details class="rules-section"><summary>💎 Pagos Principales</summary><div class="rules-body"><table class="payout-table"><tr><th>Resultado</th><th>Pago</th></tr><tr><td>Blackjack natural</td><td class="hi">3:2</td></tr><tr><td>Ganar mano</td><td class="hi">1:1</td></tr><tr><td>Empate</td><td>Devuelve apuesta</td></tr><tr><td>Rendirse</td><td>Recupera 50%</td></tr><tr><td>Seguro (dealer BJ)</td><td class="hi">2:1</td></tr></table></div></details>
+  <details class="rules-section"><summary>⭐ Perfect Pairs</summary><div class="rules-body">Par Perfecto (mismo rango y palo) 25:1 · Par de Color 12:1 · Par Mixto 5:1</div></details>
+  <details class="rules-section"><summary>🎲 21+3</summary><div class="rules-body">Trío de Palo 100:1 · Escalera de Color 40:1 · Trío 30:1 · Escalera 10:1 · Color 5:1</div></details>
 </div>
 </div>
 
@@ -526,6 +468,8 @@ header.bar{display:flex;align-items:center;justify-content:space-between;
 // ═══════════════════════════════════════════════════════════════
 let ws, myId, gameState = null;
 let bets = { main: 0, pp: 0, s21: 0 };
+let selectedStartAmount = 1000;
+let rebuyAmount = 0;
 
 // ═══════════════════════════════════════════════════════════════
 //  UTILIDADES DE CARTA
@@ -579,20 +523,17 @@ const STATUS_CLASS = {
 };
 
 function render(s) {
-  // Banner de fase
+  if (!s) return;
   document.getElementById('phase-banner').textContent = PHASES[s.phase] || s.phase;
 
-  // Balance
   const me = s.players[myId];
   if (me) document.getElementById('bal-val').textContent = me.balance;
 
-  // Dealer
   const dh = document.getElementById('dealer-hand');
   dh.innerHTML = handHTML(s.dealer.hand);
   const dv = document.getElementById('dealer-val');
   dv.textContent = s.dealer.value != null ? `Valor: ${s.dealer.value}` : '';
 
-  // Grid de jugadores
   const grid = document.getElementById('players-grid');
   grid.innerHTML = '';
   for (const id of s.order) {
@@ -603,7 +544,6 @@ function render(s) {
     const el = document.createElement('div');
     el.className = `player-card${isTurn?' is-turn':''}${isMe?' is-me':''}`;
 
-    // Resultados apuestas laterales
     let sbHtml = '';
     if (p.resultPP) {
       const r = p.resultPP;
@@ -616,7 +556,6 @@ function render(s) {
       sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'🎲':'✗'} 21+3: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`;
     }
 
-    // Manos
     let handsHtml = '';
     if (p.hands && p.hands.length > 0) {
       p.hands.forEach((hand, hIdx) => {
@@ -654,28 +593,25 @@ function render(s) {
     grid.appendChild(el);
   }
 
-  // Zona de seguro
   const insZone = document.getElementById('insurance-zone');
   const myInsDecided = me && me.insuranceDecided;
   if (s.phase === 'insurance' && me && !myInsDecided) {
     insZone.classList.add('active');
     const mainBet = me.hands[0]?.bet || 0;
-    document.getElementById('ins-text').textContent =
-      `¿Apostar $${Math.ceil(mainBet/2)} a que el dealer tiene Blackjack? (paga 2:1)`;
+    document.getElementById('ins-text').textContent = `¿Apostar $${Math.ceil(mainBet/2)} a que el dealer tiene Blackjack? (paga 2:1)`;
     document.getElementById('ins-waiting').textContent = '';
+    document.getElementById('ins-yes').style.display = '';
+    document.getElementById('ins-no').style.display = '';
   } else if (s.phase === 'insurance' && myInsDecided) {
     insZone.classList.add('active');
     document.getElementById('ins-text').textContent = 'Decisión registrada.';
     document.getElementById('ins-waiting').textContent = 'Esperando a los demás jugadores…';
     document.getElementById('ins-yes').style.display = 'none';
-    document.getElementById('ins-no').style.display  = 'none';
+    document.getElementById('ins-no').style.display = 'none';
   } else {
     insZone.classList.remove('active');
-    document.getElementById('ins-yes').style.display = '';
-    document.getElementById('ins-no').style.display  = '';
   }
 
-  // Zona de apuestas
   const bz = document.getElementById('betting-zone');
   const canBet = (s.phase === 'betting' || s.phase === 'lobby') && me && me.status !== 'ready';
   const alreadyBet = me && me.status === 'ready';
@@ -691,7 +627,6 @@ function render(s) {
     if (!canBet) { bets = { main:0, pp:0, s21:0 }; updateBetUI(); }
   }
 
-  // Botones de acción
   const actions = document.getElementById('actions');
   const myTurn = s.phase === 'playing' && s.currentPlayerId === myId && me;
   if (myTurn) {
@@ -711,20 +646,17 @@ function render(s) {
     actions.style.display = 'none';
   }
 
-  // Toast de resultado
-  if (s.phase === 'results' && me) {
+  if (s.phase === 'results' && me && me.hands[0]) {
     const mainHand = me.hands[0];
-    if (mainHand) {
-      const msgs = {
-        'blackjack-win': '🃏 ¡BLACKJACK! +' + Math.floor(mainHand.bet/2.5*1.5),
-        win:      '🎉 ¡Ganaste!',
-        lose:     '😢 Perdiste',
-        push:     '🤝 Empate — apuesta devuelta',
-        bust:     '💥 Te pasaste de 21',
-        surrender:'🏳 Te rendiste — recuperas $' + Math.floor(mainHand.bet/2),
-      };
-      if (msgs[mainHand.status]) showToast(msgs[mainHand.status]);
-    }
+    const msgs = {
+      'blackjack-win': '🃏 ¡BLACKJACK! +' + Math.floor(mainHand.bet * 1.5),
+      win:      '🎉 ¡Ganaste! +$' + mainHand.bet,
+      lose:     '😢 Perdiste -$' + mainHand.bet,
+      push:     '🤝 Empate — apuesta devuelta',
+      bust:     '💥 Te pasaste de 21',
+      surrender:'🏳 Te rendiste — recuperas $' + Math.floor(mainHand.bet/2),
+    };
+    if (msgs[mainHand.status]) showToast(msgs[mainHand.status]);
   }
 }
 
@@ -737,7 +669,7 @@ function updateBetUI() {
   document.getElementById('s21-amt').textContent  = '$' + bets.s21;
 }
 
-document.querySelectorAll('.chip').forEach(chip => {
+document.querySelectorAll('.chip[data-v]').forEach(chip => {
   chip.addEventListener('click', () => {
     const v = parseInt(chip.dataset.v);
     const t = chip.dataset.t;
@@ -750,11 +682,11 @@ document.querySelectorAll('.chip').forEach(chip => {
   });
 });
 
-document.getElementById('clear-main').addEventListener('click', () => { bets.main = 0; updateBetUI(); });
-document.getElementById('clear-pp').addEventListener('click',   () => { bets.pp   = 0; updateBetUI(); });
-document.getElementById('clear-s21').addEventListener('click',  () => { bets.s21  = 0; updateBetUI(); });
+document.getElementById('clear-main')?.addEventListener('click', () => { bets.main = 0; updateBetUI(); });
+document.getElementById('clear-pp')?.addEventListener('click',   () => { bets.pp   = 0; updateBetUI(); });
+document.getElementById('clear-s21')?.addEventListener('click',  () => { bets.s21  = 0; updateBetUI(); });
 
-document.getElementById('confirm-bet').addEventListener('click', () => {
+document.getElementById('confirm-bet')?.addEventListener('click', () => {
   if (bets.main < 1) { showToast('Necesitas al menos $1 de apuesta principal'); return; }
   ws.send(JSON.stringify({ type:'bet', main:bets.main, pp:bets.pp, s21:bets.s21 }));
   bets = { main:0, pp:0, s21:0 }; updateBetUI();
@@ -763,17 +695,17 @@ document.getElementById('confirm-bet').addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════════════
 //  SEGURO
 // ═══════════════════════════════════════════════════════════════
-document.getElementById('ins-yes').addEventListener('click', () => { ws.send(JSON.stringify({type:'insurance',take:true})); });
-document.getElementById('ins-no').addEventListener('click',  () => { ws.send(JSON.stringify({type:'insurance',take:false})); });
+document.getElementById('ins-yes')?.addEventListener('click', () => { ws.send(JSON.stringify({type:'insurance',take:true})); });
+document.getElementById('ins-no')?.addEventListener('click',  () => { ws.send(JSON.stringify({type:'insurance',take:false})); });
 
 // ═══════════════════════════════════════════════════════════════
 //  ACCIONES DE JUEGO
 // ═══════════════════════════════════════════════════════════════
-document.getElementById('btn-hit').addEventListener('click',    () => ws.send(JSON.stringify({type:'hit'})));
-document.getElementById('btn-stand').addEventListener('click',  () => ws.send(JSON.stringify({type:'stand'})));
-document.getElementById('btn-double').addEventListener('click', () => ws.send(JSON.stringify({type:'double'})));
-document.getElementById('btn-split').addEventListener('click',  () => ws.send(JSON.stringify({type:'split'})));
-document.getElementById('btn-surr').addEventListener('click',   () => ws.send(JSON.stringify({type:'surrender'})));
+document.getElementById('btn-hit')?.addEventListener('click',    () => ws.send(JSON.stringify({type:'hit'})));
+document.getElementById('btn-stand')?.addEventListener('click',  () => ws.send(JSON.stringify({type:'stand'})));
+document.getElementById('btn-double')?.addEventListener('click', () => ws.send(JSON.stringify({type:'double'})));
+document.getElementById('btn-split')?.addEventListener('click',  () => ws.send(JSON.stringify({type:'split'})));
+document.getElementById('btn-surr')?.addEventListener('click',   () => ws.send(JSON.stringify({type:'surrender'})));
 
 // ═══════════════════════════════════════════════════════════════
 //  CHAT
@@ -793,8 +725,8 @@ function sendChat() {
   ws.send(JSON.stringify({type:'chat',text:t}));
   inp.value = '';
 }
-document.getElementById('chat-send').addEventListener('click', sendChat);
-document.getElementById('chat-in').addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
+document.getElementById('chat-send')?.addEventListener('click', sendChat);
+document.getElementById('chat-in')?.addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
 
 // ═══════════════════════════════════════════════════════════════
 //  TOAST
@@ -810,26 +742,115 @@ function showToast(msg) {
 // ═══════════════════════════════════════════════════════════════
 //  REGLAS MODAL
 // ═══════════════════════════════════════════════════════════════
-document.getElementById('rules-btn').addEventListener('click',   () => document.getElementById('rules-overlay').classList.add('open'));
-document.getElementById('rules-close').addEventListener('click', () => document.getElementById('rules-overlay').classList.remove('open'));
-document.getElementById('rules-overlay').addEventListener('click', e => {
+document.getElementById('rules-btn')?.addEventListener('click',   () => document.getElementById('rules-overlay').classList.add('open'));
+document.getElementById('rules-close')?.addEventListener('click', () => document.getElementById('rules-overlay').classList.remove('open'));
+document.getElementById('rules-overlay')?.addEventListener('click', e => {
   if (e.target === document.getElementById('rules-overlay'))
     document.getElementById('rules-overlay').classList.remove('open');
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  LOBBY - SELECCIÓN DE MONTO INICIAL
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('#start-chips .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#start-chips .chip').forEach(c => c.style.opacity = '0.6');
+    chip.style.opacity = '1';
+    selectedStartAmount = parseInt(chip.dataset.start);
+    document.getElementById('selected-start').textContent = `$${selectedStartAmount}`;
+  });
+});
+document.querySelector('#start-chips .chip[data-start="1000"]').style.opacity = '1';
+
+// ═══════════════════════════════════════════════════════════════
+//  RECOMPRA UI
+// ═══════════════════════════════════════════════════════════════
+function initRebuyUI() {
+  const rebuyChips = document.querySelectorAll('#rebuy-chips .chip');
+  rebuyChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      rebuyChips.forEach(c => c.style.opacity = '0.6');
+      chip.style.opacity = '1';
+      rebuyAmount = parseInt(chip.dataset.rebuy);
+      document.getElementById('rebuy-amount-display').textContent = `$${rebuyAmount}`;
+      document.getElementById('rebuy-err').textContent = '';
+    });
+  });
+
+  document.getElementById('rebuy-request-btn')?.addEventListener('click', () => {
+    if (rebuyAmount < 100) {
+      document.getElementById('rebuy-err').textContent = 'Selecciona un monto';
+      return;
+    }
+    ws.send(JSON.stringify({ type: 'rebuy_request', amount: rebuyAmount }));
+    document.getElementById('rebuy-overlay').classList.remove('open');
+    rebuyAmount = 0;
+    document.getElementById('rebuy-amount-display').textContent = '$0';
+    rebuyChips.forEach(c => c.style.opacity = '0.6');
+    showToast('Solicitud enviada. Esperando votación...');
+  });
+
+  document.getElementById('rebuy-cancel')?.addEventListener('click', () => {
+    document.getElementById('rebuy-overlay').classList.remove('open');
+  });
+}
+
+// Botón para solicitar recompra
+const rebuyBtn = document.createElement('button');
+rebuyBtn.textContent = '💰 Comprar Fichas';
+rebuyBtn.className = 'btn-sm';
+rebuyBtn.style.marginLeft = 'auto';
+rebuyBtn.style.marginRight = '1rem';
+rebuyBtn.addEventListener('click', () => {
+  if (gameState && (gameState.phase === 'betting' || gameState.phase === 'lobby')) {
+    const currentBal = gameState.players[myId]?.balance || 0;
+    document.getElementById('rebuy-current-bal').textContent = `$${currentBal}`;
+    document.getElementById('rebuy-overlay').classList.add('open');
+  } else {
+    showToast('Solo puedes comprar fichas entre rondas');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  VOTACIÓN UI
+// ═══════════════════════════════════════════════════════════════
+function initVoteUI() {
+  document.getElementById('vote-yes')?.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'rebuy_vote', approve: true }));
+    document.getElementById('vote-overlay').classList.remove('open');
+  });
+  
+  document.getElementById('vote-no')?.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'rebuy_vote', approve: false }));
+    document.getElementById('vote-overlay').classList.remove('open');
+  });
+}
+
+function handleVoteRequest(data) {
+  document.getElementById('vote-player-name').textContent = `${data.playerName} quiere comprar fichas`;
+  document.getElementById('vote-amount').textContent = `$${data.amount}`;
+  document.getElementById('vote-waiting').textContent = '';
+  document.getElementById('vote-overlay').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  WEBSOCKET
 // ═══════════════════════════════════════════════════════════════
-function connect(name) {
+function connect(name, startAmount) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = () => { ws.send(JSON.stringify({type:'join',name})); };
+  ws.onopen = () => { ws.send(JSON.stringify({type:'join', name, startAmount})); };
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'joined') {
       myId = msg.id;
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('table').style.display = 'block';
+      const barHeader = document.querySelector('.bar');
+      if (barHeader && !document.querySelector('.rebuy-btn-added')) {
+        rebuyBtn.classList.add('rebuy-btn-added');
+        barHeader.appendChild(rebuyBtn);
+      }
     } else if (msg.type === 'state') {
       gameState = msg.state;
       render(msg.state);
@@ -838,6 +859,16 @@ function connect(name) {
     } else if (msg.type === 'error') {
       document.getElementById('lobby-err').textContent = msg.text;
       document.getElementById('join-btn').disabled = false;
+    } else if (msg.type === 'rebuy_vote_request') {
+      handleVoteRequest(msg);
+    } else if (msg.type === 'rebuy_complete') {
+      showToast(`✅ Recompra exitosa! +$${msg.amount}`);
+    } else if (msg.type === 'rebuy_denied') {
+      showToast(`❌ Tu solicitud de recompra fue rechazada`);
+    } else if (msg.type === 'vote_cast') {
+      // Silencioso
+    } else if (msg.type === 'rebuy_vote_closed') {
+      if (!msg.approved) showToast(`La votación de recompra terminó sin aprobación`);
     }
   };
   ws.onclose = () => showToast('Desconectado — recarga la página');
@@ -848,10 +879,14 @@ function tryJoin() {
   if (!name) { document.getElementById('lobby-err').textContent = 'Escribe tu nombre'; return; }
   document.getElementById('join-btn').disabled = true;
   document.getElementById('lobby-err').textContent = '';
-  connect(name);
+  connect(name, selectedStartAmount);
 }
-document.getElementById('join-btn').addEventListener('click', tryJoin);
-document.getElementById('name-in').addEventListener('keydown', e => { if (e.key==='Enter') tryJoin(); });
+
+document.getElementById('join-btn')?.addEventListener('click', tryJoin);
+document.getElementById('name-in')?.addEventListener('keydown', e => { if (e.key==='Enter') tryJoin(); });
+
+initRebuyUI();
+initVoteUI();
 </script>
 </body>
 </html>
