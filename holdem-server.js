@@ -535,6 +535,14 @@ function hResolveRebuy() {
 function setupHoldemWss(wss_holdem) {
   wss_holdem.on('connection',(ws)=>{
     let myId=null;
+    let isAlive=true;
+    const pingInterval = setInterval(()=>{
+      if (!isAlive) { ws.terminate(); return; }
+      isAlive=false;
+      ws.ping();
+    },30000);
+    ws.on('pong',()=>{ isAlive=true; });
+
     ws.on('message',(raw)=>{
       let msg; try{msg=JSON.parse(raw);}catch{return;}
 
@@ -542,6 +550,16 @@ function setupHoldemWss(wss_holdem) {
         if (Object.keys(hState.players).length>=8) { ws.send(JSON.stringify({type:'error',text:'Mesa llena (máx 8)'})); return; }
         const name=String(msg.name||'Jugador').slice(0,16).trim()||'Jugador';
         const stack=Math.min(10000,Math.max(100,parseInt(msg.stack)||1000));
+        const existingId = Object.keys(hState.players).find(id =>
+          hState.players[id].name.toLowerCase() === name.toLowerCase()
+        );
+        if (existingId) {
+          const oldWs = hState.players[existingId].ws;
+          if (oldWs && oldWs.readyState === WebSocket.OPEN) oldWs.close();
+          delete hState.players[existingId];
+          hState.order = hState.order.filter(id => id !== existingId);
+          hChat(`👋 ${name} se ha reconectado (reemplazando sesión anterior)`);
+        }
         myId=`h${Date.now().toString(36)}${Math.random().toString(36).slice(2,4)}`;
         hState.players[myId]=mkPlayer(myId,name,stack,ws);
         if (!hState.order.includes(myId)) hState.order.push(myId);
@@ -592,6 +610,7 @@ function setupHoldemWss(wss_holdem) {
     });
 
     ws.on('close',()=>{
+      clearInterval(pingInterval);
       if (myId&&hState.players[myId]) {
         const name=hState.players[myId].name;
         // If playing, treat as fold

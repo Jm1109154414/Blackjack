@@ -228,11 +228,31 @@ function resolveRebuyVote() {
 // WS handlers
 wss_bj.on('connection',(ws)=>{
   let myId=null;
+  let isAlive=true;
+  const pingInterval = setInterval(()=>{
+    if (!isAlive) { ws.terminate(); return; }
+    isAlive=false;
+    ws.ping();
+  },30000);
+  ws.on('pong',()=>{ isAlive=true; });
+
   ws.on('message',(raw)=>{
     let msg;try{msg=JSON.parse(raw);}catch{return;}
     if(msg.type==='join'){
       if(Object.keys(state.players).length>=5){ws.send(JSON.stringify({type:'error',text:'Mesa llena (máx 5)'}));return;}
       const name=String(msg.name||'Jugador').slice(0,16).trim()||'Jugador';
+      const existingId = Object.keys(state.players).find(id =>
+        state.players[id].name.toLowerCase() === name.toLowerCase()
+      );
+      if (existingId) {
+        const oldWs = state.players[existingId].ws;
+        if (oldWs && oldWs.readyState === WebSocket.OPEN) {
+          oldWs.close(1000, 'Replaced by new connection');
+        }
+        delete state.players[existingId];
+        state.order = state.order.filter(id => id !== existingId);
+        bjChat(`👋 ${name} se ha reconectado (reemplazando sesión anterior)`);
+      }
       const sa=parseInt(msg.startAmount);
       if(!ALLOWED_START_AMOUNTS.includes(sa)){ws.send(JSON.stringify({type:'error',text:'Monto no válido'}));return;}
       const reqMode=msg.gameMode||'casino';
@@ -270,6 +290,7 @@ wss_bj.on('connection',(ws)=>{
     else if(msg.type==='surrender'){if(hand.cards.length!==2||hand.fromSplit||player.hands.length>1)return;const ref=Math.floor(hand.bet/2);player.balance+=ref;if(state.gameMode==='tournament')state.potTotal-=ref;hand.status='surrender';state.currentHandIdx++;advanceToNextHand();}
   });
   ws.on('close',()=>{
+    clearInterval(pingInterval);
     if(myId&&state.players[myId]){const name=state.players[myId].name;delete state.players[myId];bjChat(`${name} dejó la mesa`);if(state.phase==='playing')advanceToNextHand();else if(state.phase==='insurance'&&Object.values(state.players).every(p=>p.insuranceDecided))resolveInsurance();if(Object.keys(state.players).length===0)state.phase='lobby';bjSendState();}
   });
 });
