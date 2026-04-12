@@ -123,9 +123,17 @@ function publicHState() {
     players[id]={
       id,name:p.name,stack:p.stack,status:p.status,
       streetBet:p.streetBet, totalBet:p.totalBet,
-      holeCards: (hState.phase==='showdown') ? p.holeCards :
-        (p.status==='folded'||p.status==='out') ? [] :
-        p.holeCards.map((_,i)=>i===0?_:_), // show own cards via personal send
+      // Ocultar cartas ajenas: se envían como backs {suit:'?'} durante el juego.
+      // El personal-send en hSendState() las reemplaza con las reales para su dueño.
+      holeCards: (() => {
+        if (hState.phase === 'showdown') {
+          // Solo contendientes muestran sus cartas en showdown
+          return (p.status === 'active' || p.status === 'allin') ? p.holeCards : [];
+        }
+        if (p.status === 'folded' || p.status === 'out' || p.holeCards.length === 0) return [];
+        // Jugador activo durante la mano: mandar backs
+        return p.holeCards.map(() => ({ suit: '?', rank: '?' }));
+      })(),
       handEval: hState.phase==='showdown' ? p.handEval : null,
       handName: hState.phase==='showdown' ? p.handName : '',
     };
@@ -157,8 +165,9 @@ function hSendState() {
     if (!ws||ws.readyState!==WebSocket.OPEN) continue;
     const p = hState.players[id];
     const personal = JSON.parse(JSON.stringify(base));
-    // Show own hole cards always (except when out)
-    if (p.status!=='out' && p.holeCards.length>0) {
+    // Revelar las cartas propias solo durante fases activas (no en showdown,
+    // que ya vienen correctas desde publicHState).
+    if (hState.phase !== 'showdown' && p.status !== 'out' && p.holeCards.length > 0) {
       personal.players[id].holeCards = p.holeCards;
     }
     ws.send(JSON.stringify({type:'state',state:personal}));
@@ -434,29 +443,53 @@ function handleAction(playerId, msg) {
   }
 
   if (type==='raise'||type==='allin') {
-    let amount = type==='allin' ? p.stack : parseInt(msg.amount)||0;
-    if (type==='raise') {
-      const totalRaise = amount; // total amount player wants their total bet to be
-      const extraNeeded = totalRaise - p.streetBet;
-      if (extraNeeded<=0||extraNeeded<hState.lastRaise) {
-        if (extraNeeded+p.streetBet <= hState.currentBet) { hToPlayer(playerId,{type:'error',text:`El raise mínimo es $${hState.currentBet+hState.lastRaise}`}); return; }
+    // amount = fichas ADICIONALES a poner (para all-in es todo el stack).
+    // Para raise normal, msg.amount = nivel TOTAL al que quiere subir (raise-to).
+    let extra;
+    if (type === 'allin') {
+      extra = p.stack;
+    } else {
+      const targetTotal = parseInt(msg.amount) || 0; // raise-to total
+      // Validar: el target debe ser >= minRaise, excepto si el jugador va all-in
+      if (targetTotal < hState.minRaise) {
+        const maxCanBet = p.stack + p.streetBet;
+        if (maxCanBet >= hState.minRaise) {
+          // Tiene fichas para el raise mínimo pero no lo alcanzó
+          hToPlayer(playerId, { type:'error', text:`Raise mínimo: $${hState.minRaise}` });
+          return;
+        }
+        // Menos que minRaise pero es todo su stack — all-in válido
       }
-      if (extraNeeded>p.stack) amount=p.stack; // auto allin if not enough
-      else amount=extraNeeded;
+      extra = Math.min(targetTotal - p.streetBet, p.stack);
+      if (extra <= 0) {
+        hToPlayer(playerId, { type:'error', text:`Raise mínimo: $${hState.minRaise}` });
+        return;
+      }
     }
-    const actual=Math.min(amount,p.stack);
-    p.stack-=actual; p.streetBet+=actual; p.totalBet+=actual; hState.pot+=actual;
-    const raiseSize=p.streetBet-hState.currentBet;
-    if (raiseSize>0) { hState.lastRaise=raiseSize; hState.currentBet=p.streetBet; hState.minRaise=hState.currentBet+hState.lastRaise; }
-    if (p.stack===0) { p.status='allin'; hChat(`${p.name} ALL-IN ($${p.totalBet} total)`); }
+
+    const actual = Math.min(extra, p.stack);
+    p.stack -= actual; p.streetBet += actual; p.totalBet += actual; hState.pot += actual;
+    const raiseSize = p.streetBet - hState.currentBet;
+    if (raiseSize > 0) {
+      hState.lastRaise  = raiseSize;
+      hState.currentBet = p.streetBet;
+      hState.minRaise   = hState.currentBet + hState.lastRaise;
+    }
+    if (p.stack === 0) { p.status = 'allin'; hChat(`${p.name} ALL-IN ($${p.totalBet} total)`); }
     else hChat(`${p.name} sube a $${p.streetBet}`);
-    // Re-open betting: everyone else needs to act again
-    const others=hState.actingOrder.filter(id=>id!==playerId&&hState.players[id]?.status==='active');
-    // Put them after raiser
-    hState.actingOrder=[...others];
-    hState.actingIdx=0;
+
+    // Re-apertura completa: TODOS los activos excepto el que subió deben actuar de nuevo.
+    // Se reconstruye desde hState.order para incluir a quienes ya habían actuado antes.
+    const raiserSeatIdx = hState.order.indexOf(playerId);
+    const newActing = [];
+    for (let i = 1; i <= hState.order.length; i++) {
+      const sid = hState.order[(raiserSeatIdx + i) % hState.order.length];
+      if (sid !== playerId && hState.players[sid]?.status === 'active') newActing.push(sid);
+    }
+    hState.actingOrder = newActing;
+    hState.actingIdx   = 0;
     hSendState();
-    if (hState.actingOrder.length>0) notifyTurn();
+    if (hState.actingOrder.length > 0) notifyTurn();
     else nextStreet();
     return;
   }

@@ -97,6 +97,7 @@ header.bar{display:flex;align-items:center;justify-content:space-between;padding
 .p-hand{display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.3rem;min-height:64px}
 .p-bet-info{font-size:.65rem;color:var(--gold);min-height:.9rem}
 .p-hand-name{font-size:.6rem;color:rgba(201,168,76,.7);font-family:'Lora',serif;font-style:italic;margin-top:.2rem}
+.p-hand-name-show{font-size:.7rem;font-weight:700;color:var(--gold2);background:rgba(201,168,76,.15);border-radius:5px;padding:2px 6px;border:1px solid rgba(201,168,76,.3)}
 
 /* ─── START ZONE ─────────────────────────────────── */
 #start-zone{display:none;flex-direction:column;align-items:center;gap:.7rem;
@@ -454,11 +455,22 @@ function render(s){
       p.status==='folded'?'<span class="badge folded">FOLD</span>':'',
     ].join('');
 
-    const cards=p.holeCards||[];
-    const cardsHtml=cards.length>0?cards.map(c=>cardHTML(c,true)).join(''):'<div style="font-size:.6rem;color:var(--cream2);opacity:.4;padding:.5rem 0">Sin cartas</div>';
+    const cards = p.holeCards || [];
+    // Si el jugador tiene cartas pero son placeholders {suit:'?'}, mostrar backs.
+    // cardHTML ya maneja suit==='?' como back. Sólo mostrar "Sin cartas" si no hay nada.
+    const hasCards = cards.length > 0;
+    const cardsHtml = hasCards
+      ? cards.map(c => cardHTML(c, true)).join('')
+      : (p.status === 'folded' || p.status === 'out'
+          ? ''
+          : '<div style="font-size:.6rem;color:var(--cream2);opacity:.4;padding:.5rem 0">Sin cartas</div>');
 
     const betTxt=p.streetBet>0?`Apuesta: $${p.streetBet}`:(p.totalBet>0?`Total: $${p.totalBet}`:'');
-    const handNameHtml=p.handName?`<div class="p-hand-name">${esc(p.handName)}</div>`:'';
+    // En showdown, destacar la mano con un badge más visible
+    const isShowdown = s.phase === 'showdown';
+    const handNameHtml = p.handName
+      ? `<div class="p-hand-name${isShowdown?' p-hand-name-show':''}">${esc(p.handName)}</div>`
+      : '';
 
     el.innerHTML=`
       <div class="p-head"><span class="p-name">${esc(p.name)}${isMe?'<span class="you-tag">Tú</span>':''}</span><span class="p-stack">$${p.stack}</span></div>
@@ -490,10 +502,14 @@ function render(s){
     document.getElementById('btn-call').textContent=`Call $${toCall}`;
     document.getElementById('btn-check').disabled=toCall>0;
     document.getElementById('btn-call').disabled=toCall===0;
-    const minR=s.minRaise||100;
-    document.getElementById('raise-input').min=minR;
-    document.getElementById('raise-input').placeholder=`Mín $${minR}`;
-    document.getElementById('btn-allin').textContent=`All-In $${me.stack} 🔥`;
+    const minR = s.minRaise || 100;
+    const maxBet = me.stack + (me.streetBet || 0);
+    document.getElementById('raise-input').min = minR;
+    document.getElementById('raise-input').max = maxBet;
+    document.getElementById('raise-input').placeholder = `$${minR} – $${maxBet}`;
+    document.getElementById('btn-allin').textContent = `All-In $${me.stack} 🔥`;
+    // Deshabilitar raise si no puede subir más que el call
+    document.getElementById('btn-raise').disabled = maxBet <= (s.currentBet || 0);
   }
 
   // Show/hide rebuy btn
@@ -541,11 +557,18 @@ document.getElementById('btn-fold').addEventListener('click',()=>ws.send(JSON.st
 document.getElementById('btn-check').addEventListener('click',()=>ws.send(JSON.stringify({type:'check'})));
 document.getElementById('btn-call').addEventListener('click',()=>ws.send(JSON.stringify({type:'call'})));
 document.getElementById('btn-raise').addEventListener('click',()=>{
-  const v=parseInt(document.getElementById('raise-input').value)||0;
-  const minR=gameState?.minRaise||100;
-  if(v<minR){showToast(`El raise mínimo es $${minR}`);return;}
-  ws.send(JSON.stringify({type:'raise',amount:v}));
-  document.getElementById('raise-input').value='';
+  const v = parseInt(document.getElementById('raise-input').value) || 0;
+  const minR = gameState?.minRaise || 100;
+  const me = gameState?.players[myId];
+  if (!me) return;
+  const maxBet = me.stack + (me.streetBet || 0); // máximo que puede poner en total
+  if (v < minR) {
+    // Si es un all-in (v === maxBet), permitirlo aunque sea < minR
+    if (v !== maxBet) { showToast(`Raise mínimo: $${minR}`); return; }
+  }
+  if (v > maxBet) { showToast(`Máximo: $${maxBet} (tu stack + ya apostado)`); return; }
+  ws.send(JSON.stringify({ type: 'raise', amount: v }));
+  document.getElementById('raise-input').value = '';
 });
 document.getElementById('btn-allin').addEventListener('click',()=>ws.send(JSON.stringify({type:'allin'})));
 document.getElementById('raise-input').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-raise').click();});
