@@ -1,7 +1,7 @@
 {
-  "name": "blackjack-multiplayer",
-  "version": "1.0.0",
-  "description": "Blackjack multijugador local con recompra y votación",
+  "name": "casino-local",
+  "version": "2.0.0",
+  "description": "Casino local: Blackjack (Casino+Torneo) + Texas Hold'em",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

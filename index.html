@@ -3,798 +3,186 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>♠ Blackjack - Casino y Torneo</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<title>♠ Casino Local</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  --bg:#050e07;--felt:#1a5c35;--felt2:#14472a;--border:#0e3320;
-  --gold:#c9a84c;--gold2:#e8c96e;--gold3:#7a5a1a;
-  --cream:#f0e6d0;--cream2:rgba(240,230,208,.65);
-  --red:#d63031;--blue:#2980b9;--green2:#27ae60;--purple:#8e44ad;
-  --card:#faf6ef;--shadow:0 8px 32px rgba(0,0,0,.7);
-  --radius:12px;
-}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:radial-gradient(ellipse at 50% 20%,#0d2417 0%,var(--bg) 100%);
-  color:var(--cream);font-family:'Cinzel',serif;overflow-x:hidden}
-body{display:flex;flex-direction:column;align-items:center;min-height:100vh}
-
-/* LOBBY */
-#lobby{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at 50% 35%,#0d2417,#020a04)}
-#lobby h1{font-family:'Cinzel Decorative',cursive;font-size:clamp(2rem,6vw,4rem);
-  color:var(--gold);text-shadow:0 0 50px rgba(201,168,76,.5),3px 3px 0 #000;
-  margin-bottom:.3em;letter-spacing:.06em}
-#lobby .tagline{font-family:'Lora',serif;font-style:italic;color:var(--cream2);
-  font-size:1rem;letter-spacing:.12em;margin-bottom:2.5rem}
-.lcard{background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.25);
-  border-radius:16px;padding:2rem;display:flex;flex-direction:column;gap:1rem;
-  min-width:300px;box-shadow:var(--shadow),inset 0 1px 0 rgba(201,168,76,.1)}
-.lcard label{font-size:.72rem;color:var(--gold);letter-spacing:.15em}
-.lcard input{width:100%;padding:.75rem 1rem;background:rgba(0,0,0,.45);
-  border:1px solid rgba(201,168,76,.3);border-radius:8px;color:var(--cream);
-  font-family:'Cinzel',serif;font-size:.95rem;outline:none;transition:border-color .2s}
-.lcard input:focus{border-color:var(--gold)}
-#lobby-err{color:#e74c3c;font-size:.78rem;text-align:center;min-height:1.2em}
-.btn-gold{padding:.8rem 1.8rem;
-  background:linear-gradient(135deg,var(--gold3),var(--gold),var(--gold3));
-  color:#1a0800;border:none;border-radius:8px;font-family:'Cinzel',serif;
-  font-weight:700;font-size:.9rem;cursor:pointer;letter-spacing:.08em;
-  box-shadow:0 4px 16px rgba(201,168,76,.3);transition:all .2s}
-.btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,168,76,.5)}
-.btn-gold:disabled{opacity:.4;pointer-events:none}
-
-/* TABLA */
-#table{width:100%;max-width:1100px;padding:1rem 1.2rem 2rem;display:none}
-header.bar{display:flex;align-items:center;justify-content:space-between;
-  padding:.6rem 0;border-bottom:1px solid rgba(201,168,76,.15);margin-bottom:.8rem}
-.logo{font-family:'Cinzel Decorative',cursive;color:var(--gold);font-size:1.3rem}
-#my-balance{font-size:.85rem;color:var(--gold2)}
-#my-balance span{font-size:1.15rem;font-weight:700}
-#mode-banner{text-align:center;font-size:.75rem;color:var(--gold);background:rgba(0,0,0,.3);
-  padding:.2rem;border-radius:8px;margin-bottom:.3rem}
-#phase-banner{text-align:center;font-family:'Lora',serif;font-style:italic;
-  font-size:1rem;color:var(--cream2);letter-spacing:.08em;margin-bottom:.8rem}
-.felt{background:radial-gradient(ellipse at 50% 50%,var(--felt),var(--felt2));
-  border-radius:20px;padding:1.2rem;
-  box-shadow:inset 0 0 60px rgba(0,0,0,.4),var(--shadow);
-  border:3px solid var(--gold3);margin-bottom:.9rem}
-.dealer-zone{text-align:center;margin-bottom:.6rem}
-.zone-lbl{font-size:.65rem;letter-spacing:.25em;color:var(--gold);opacity:.7;text-transform:uppercase;margin-bottom:.4rem}
-#dealer-val{font-size:.72rem;color:var(--gold2);margin-top:.35rem;min-height:1em}
-.hand{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;min-height:82px}
-.card{width:58px;height:82px;border-radius:7px;background:var(--card);
-  border:1px solid #c8c0b0;box-shadow:2px 3px 10px rgba(0,0,0,.5);
+html,body{min-height:100%;font-family:'Cinzel',serif}
+body{
+  background:#050e07;
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(201,168,76,.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(26,92,53,.15) 0%, transparent 50%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-family:'Cinzel',serif;font-weight:700;position:relative;
-  animation:dealC .28s ease-out;user-select:none;flex-shrink:0}
-@keyframes dealC{from{transform:scale(.4) rotate(-12deg);opacity:0}to{transform:scale(1);opacity:1}}
-.card.red{color:var(--red)}.card.black{color:#111}
-.card.back{background:linear-gradient(135deg,#1a3a6b 30%,#0d2147 70%);border-color:#3a5a9b}
-.card.back::after{content:'🂠';font-size:2.2rem;color:rgba(255,255,255,.12)}
-.card .cr{font-size:.95rem;line-height:1}.card .cs{font-size:.8rem;line-height:1}
-.card.sm{width:44px;height:62px}.card.sm .cr{font-size:.75rem}.card.sm .cs{font-size:.62rem}
-#players-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
-  gap:.8rem;margin-bottom:.8rem}
-.player-card{background:rgba(0,0,0,.35);border:1px solid rgba(201,168,76,.2);
-  border-radius:12px;padding:.8rem;transition:border-color .3s,box-shadow .3s;position:relative}
-.player-card.is-turn{border-color:var(--gold);animation:pulseTurn 1.6s infinite}
-@keyframes pulseTurn{0%,100%{box-shadow:0 0 16px rgba(201,168,76,.25)}50%{box-shadow:0 0 28px rgba(201,168,76,.6)}}
-.player-card.is-me{border-color:rgba(52,152,219,.45)}
-.p-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
-.p-name{font-size:.72rem;letter-spacing:.1em;color:var(--gold2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.you-tag{background:rgba(52,152,219,.3);border-radius:4px;padding:1px 4px;font-size:.58rem;color:#7fc8f0;margin-left:4px}
-.p-bal{font-size:.7rem;color:var(--cream2);white-space:nowrap}
-.sb-badges{display:flex;flex-direction:column;gap:3px;margin-bottom:.4rem}
-.sb-badge{font-size:.62rem;padding:2px 6px;border-radius:5px;letter-spacing:.06em}
-.sb-badge.win{background:rgba(39,174,96,.35);color:#a8f0c8}
-.sb-badge.lose{background:rgba(192,57,43,.3);color:#f0a8a8}
-.hands-wrap{display:flex;flex-direction:column;gap:.5rem}
-.hand-box{border-radius:7px;padding:.3rem .3rem .5rem;transition:background .2s}
-.hand-box.active-h{background:rgba(201,168,76,.1);outline:1px solid rgba(201,168,76,.4)}
-.hand-meta{display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem;flex-wrap:wrap}
-.hand-bet-tag{font-size:.6rem;color:var(--gold);padding:1px 5px;border-radius:4px;
-  background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.25)}
-.hand-val{font-size:.7rem;color:var(--cream2)}
-.hand-status{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:4px;letter-spacing:.06em}
-.hs-bust{background:rgba(192,57,43,.7)}.hs-win,.hs-blackjack-win{background:rgba(39,174,96,.7)}
-.hs-lose{background:rgba(192,57,43,.7)}.hs-push{background:rgba(52,152,219,.5)}
-.hs-surrender{background:rgba(127,140,141,.5)}.hs-blackjack{background:linear-gradient(90deg,var(--gold3),var(--gold));color:#1a0800}
-#insurance-zone{display:none;flex-direction:column;align-items:center;gap:.8rem;
-  background:rgba(0,0,0,.4);border:1px solid rgba(201,168,76,.35);border-radius:14px;
-  padding:1.2rem;margin-bottom:.8rem;text-align:center}
-#insurance-zone.active{display:flex}
-#insurance-zone h3{font-size:.9rem;letter-spacing:.15em;color:var(--gold)}
-#insurance-zone p{font-family:'Lora',serif;font-size:.85rem;color:var(--cream2);font-style:italic}
-.ins-btns{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center}
-.btn-ins-yes{padding:.65rem 1.4rem;background:linear-gradient(135deg,#1e6b43,#27ae60);
-  color:#fff;border:none;border-radius:8px;font-family:'Cinzel',serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s}
-.btn-ins-yes:hover{transform:translateY(-1px)}
-.btn-ins-no{padding:.65rem 1.4rem;background:rgba(0,0,0,.35);
-  border:1px solid rgba(201,168,76,.3);color:var(--cream2);border-radius:8px;
-  font-family:'Cinzel',serif;font-size:.85rem;cursor:pointer;transition:all .18s}
-.btn-ins-no:hover{background:rgba(201,168,76,.1)}
-#ins-waiting{font-size:.75rem;color:var(--cream2);opacity:.6;font-family:'Lora',serif;font-style:italic}
-#betting-zone{display:none;flex-direction:column;gap:.9rem;
-  background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.2);
-  border-radius:14px;padding:1.2rem;margin-bottom:.8rem}
-#betting-zone.active{display:flex}
-.bet-section-title{font-size:.7rem;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:.3rem}
-.chips{display:flex;gap:.5rem;flex-wrap:wrap}
-.chip{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-family:'Cinzel',serif;font-weight:700;font-size:.7rem;cursor:pointer;
-  border:3px dashed rgba(255,255,255,.22);box-shadow:0 3px 10px rgba(0,0,0,.45),inset 0 2px 4px rgba(255,255,255,.15);
-  transition:transform .14s;color:#fff;user-select:none;flex-shrink:0}
-.chip:hover{transform:scale(1.12) translateY(-2px)}.chip:active{transform:scale(.93)}
-.chip[data-v="50"]{background:radial-gradient(circle,#e74c3c,#c0392b)}
-.chip[data-v="100"]{background:radial-gradient(circle,#2980b9,#1a5276)}
-.chip[data-v="250"]{background:radial-gradient(circle,#27ae60,#1e6b43)}
-.chip[data-v="500"]{background:radial-gradient(circle,#8e44ad,#6c3483)}
-.chip[data-v="1000"]{background:radial-gradient(circle,#e67e22,#ba6010)}
-.chip.sm{width:40px;height:40px;font-size:.62rem}
-.bet-row{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
-.bet-amt{font-size:1.4rem;color:var(--gold);font-weight:700;min-width:50px;text-align:center}
-.bet-amt.sm{font-size:1rem}
-.btn-sm{padding:.35rem .8rem;border:1px solid rgba(201,168,76,.35);background:transparent;
-  color:var(--cream2);border-radius:6px;font-family:'Cinzel',serif;font-size:.72rem;cursor:pointer;transition:all .15s}
-.btn-sm:hover{background:rgba(201,168,76,.12)}
-#waiting-txt{font-family:'Lora',serif;font-style:italic;font-size:.82rem;color:var(--cream2);opacity:.65;text-align:center}
-#actions{display:none;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-bottom:.8rem}
-.btn-act{padding:.72rem 1.4rem;border:none;border-radius:10px;font-family:'Cinzel',serif;
-  font-size:.85rem;font-weight:700;cursor:pointer;letter-spacing:.05em;transition:all .18s}
-.btn-hit{background:linear-gradient(135deg,#27ae60,#1e6b43);color:#fff;box-shadow:0 4px 14px rgba(39,174,96,.3)}
-.btn-stand{background:linear-gradient(135deg,#c0392b,#922b21);color:#fff;box-shadow:0 4px 14px rgba(192,57,43,.3)}
-.btn-double{background:linear-gradient(135deg,#f39c12,#b7770d);color:#fff;box-shadow:0 4px 14px rgba(243,156,18,.3)}
-.btn-split{background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;box-shadow:0 4px 14px rgba(142,68,173,.3)}
-.btn-surr{background:rgba(0,0,0,.4);color:var(--cream2);border:1px solid rgba(201,168,76,.3)}
-.btn-act:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.1)}
-.btn-act:disabled{opacity:.3;pointer-events:none}
-#chat-box{background:rgba(0,0,0,.28);border-radius:10px;border:1px solid rgba(255,255,255,.06);overflow:hidden;margin-bottom:.5rem}
-#chat-log{height:100px;overflow-y:auto;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.25rem;
-  scrollbar-width:thin;scrollbar-color:rgba(201,168,76,.25) transparent}
-.cm{font-size:.72rem;color:var(--cream2);line-height:1.4}
-.cm.sys{color:rgba(201,168,76,.65);font-style:italic}
-.chat-inp{display:flex;border-top:1px solid rgba(255,255,255,.06)}
-#chat-in{flex:1;background:transparent;border:none;padding:.5rem .8rem;color:var(--cream);
-  font-family:'Cinzel',serif;font-size:.76rem;outline:none}
-#chat-send{padding:.5rem .9rem;background:rgba(201,168,76,.12);border:none;
-  border-left:1px solid rgba(255,255,255,.06);color:var(--gold);font-family:'Cinzel',serif;font-size:.76rem;cursor:pointer}
-#toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%) translateY(-90px);
-  background:rgba(10,20,10,.96);border:1px solid var(--gold);border-radius:10px;
-  padding:.65rem 1.5rem;font-family:'Lora',serif;font-size:1.05rem;
-  color:var(--gold2);letter-spacing:.08em;z-index:500;transition:transform .4s cubic-bezier(.175,.885,.32,1.275)}
-#toast.show{transform:translateX(-50%) translateY(0)}
-#rules-btn{position:fixed;bottom:1.2rem;right:1.2rem;z-index:300;
-  background:rgba(10,20,12,.92);border:1px solid rgba(201,168,76,.4);
-  color:var(--gold);padding:.6rem 1.1rem;border-radius:10px;font-family:'Cinzel',serif;
-  font-size:.78rem;cursor:pointer;letter-spacing:.1em;
-  box-shadow:var(--shadow);transition:all .2s}
-#rules-btn:hover{background:rgba(201,168,76,.15)}
-#rules-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.65);
-  display:none;align-items:flex-start;justify-content:flex-end}
-#rules-overlay.open{display:flex}
-#rules-panel{width:min(480px,100%);height:100vh;overflow-y:auto;
-  background:linear-gradient(180deg,#0a1e0d,#071208);
-  border-left:1px solid rgba(201,168,76,.25);padding:1.5rem;
-  scrollbar-width:thin;scrollbar-color:rgba(201,168,76,.25) transparent}
-.rules-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
-.rules-header h2{font-family:'Cinzel Decorative',cursive;color:var(--gold);font-size:1.3rem;letter-spacing:.06em}
-#rules-close{background:transparent;border:1px solid rgba(201,168,76,.3);color:var(--gold);
-  padding:.3rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.85rem;cursor:pointer}
-.rules-section{border:1px solid rgba(201,168,76,.18);border-radius:10px;margin-bottom:.7rem;overflow:hidden}
-.rules-section summary{padding:.75rem 1rem;cursor:pointer;list-style:none;
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:.8rem;letter-spacing:.1em;color:var(--gold2);
-  background:rgba(201,168,76,.07);user-select:none}
-.rules-section summary::-webkit-details-marker{display:none}
-.rules-section summary::after{content:'▾';font-size:.75rem;transition:transform .2s;color:var(--gold)}
-.rules-section[open] summary::after{transform:rotate(180deg)}
-.rules-section summary:hover{background:rgba(201,168,76,.12)}
-.rules-body{padding:.9rem 1rem;font-family:'Lora',serif;font-size:.82rem;line-height:1.7;
-  color:var(--cream2);border-top:1px solid rgba(201,168,76,.12)}
-.rules-body strong{color:var(--gold2);font-family:'Cinzel',serif;font-size:.77rem}
-.rules-body ul{padding-left:1.2rem;margin:.4rem 0}
-.rules-body li{margin-bottom:.3rem}
-.payout-table{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.78rem}
-.payout-table th{color:var(--gold);font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.1em;
-  padding:.4rem .6rem;border-bottom:1px solid rgba(201,168,76,.25);text-align:left}
-.payout-table td{padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);color:var(--cream2)}
-.payout-table tr:last-child td{border-bottom:none}
-.hi{color:var(--gold2);font-weight:700}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(201,168,76,.25);border-radius:2px}
-#rebuy-modal, #vote-modal{position:fixed;inset:0;z-index:450;display:none;background:rgba(0,0,0,.85);align-items:center;justify-content:center}
-#rebuy-modal.open, #vote-modal.open{display:flex}
-#rebuy-panel, #vote-panel{background:linear-gradient(180deg,#0a1e0d,#071208);border:2px solid var(--gold3);border-radius:16px;padding:1.5rem;width:min(400px,90%);text-align:center;box-shadow:var(--shadow)}
-#rebuy-panel h3, #vote-panel h3{font-family:'Cinzel Decorative',cursive;color:var(--gold);margin-bottom:.5rem}
-#pot-display{font-size:.9rem;color:var(--gold);text-align:center;margin-bottom:.5rem;font-weight:bold}
+  min-height:100vh;padding:2rem 1.2rem;
+}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:2.8rem}
+.hdr h1{
+  font-family:'Cinzel Decorative',cursive;
+  font-size:clamp(1.8rem,7vw,3.5rem);
+  background:linear-gradient(135deg,#7a5a1a,#c9a84c,#e8c96e,#c9a84c,#7a5a1a);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:.06em;margin-bottom:.4rem;
+  filter:drop-shadow(0 0 30px rgba(201,168,76,.35));
+}
+.hdr p{
+  font-family:'Lora',serif;font-style:italic;
+  color:rgba(240,230,208,.45);font-size:clamp(.8rem,2.5vw,1rem);
+  letter-spacing:.15em;
+}
+
+/* Cards grid */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1.2rem;width:100%;max-width:900px;
+}
+
+/* Game card */
+.gcard{
+  position:relative;overflow:hidden;
+  border-radius:20px;cursor:pointer;
+  transition:transform .25s cubic-bezier(.175,.885,.32,1.3),box-shadow .25s;
+  text-decoration:none;display:block;
+  border:1px solid rgba(255,255,255,.08);
+}
+.gcard:hover{transform:translateY(-6px) scale(1.01)}
+.gcard:active{transform:scale(.97)}
+
+/* Card inner */
+.gcard-inner{padding:2rem 1.6rem 2rem;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;z-index:1}
+
+/* Backgrounds per game */
+.gcard.bj-casino{
+  background:linear-gradient(145deg,#0a2416,#1a5c35,#0a2416);
+  box-shadow:0 12px 40px rgba(26,92,53,.5);
+}
+.gcard.bj-casino:hover{box-shadow:0 20px 60px rgba(26,92,53,.7)}
+
+.gcard.bj-torneo{
+  background:linear-gradient(145deg,#1a1200,#4a3800,#1a1200);
+  box-shadow:0 12px 40px rgba(74,56,0,.55);
+  border-color:rgba(201,168,76,.2);
+}
+.gcard.bj-torneo:hover{box-shadow:0 20px 60px rgba(201,168,76,.3)}
+
+.gcard.holdem{
+  background:linear-gradient(145deg,#1a0a0a,#6b1a1a,#1a0a0a);
+  box-shadow:0 12px 40px rgba(107,26,26,.55);
+  border-color:rgba(214,48,49,.15);
+}
+.gcard.holdem:hover{box-shadow:0 20px 60px rgba(214,48,49,.35)}
+
+/* Decorative corner suit */
+.gcard-suit{
+  position:absolute;font-size:7rem;opacity:.06;
+  font-family:serif;line-height:1;user-select:none;
+  bottom:-1rem;right:-.5rem;
+}
+.gcard.bj-casino .gcard-suit{color:#2ecc71}
+.gcard.bj-torneo .gcard-suit{color:#e8c96e}
+.gcard.holdem   .gcard-suit{color:#e74c3c}
+
+/* Icon */
+.gcard-icon{font-size:3rem;margin-bottom:1rem;line-height:1}
+.gcard.bj-casino .gcard-icon{filter:drop-shadow(0 0 12px rgba(39,174,96,.6))}
+.gcard.bj-torneo .gcard-icon{filter:drop-shadow(0 0 12px rgba(201,168,76,.6))}
+.gcard.holdem    .gcard-icon{filter:drop-shadow(0 0 12px rgba(231,76,60,.6))}
+
+/* Text */
+.gcard-title{
+  font-family:'Cinzel Decorative',cursive;
+  font-size:clamp(.95rem,2.5vw,1.3rem);
+  margin-bottom:.4rem;letter-spacing:.06em;
+}
+.gcard.bj-casino .gcard-title{color:#a8f0c8}
+.gcard.bj-torneo .gcard-title{color:#e8c96e}
+.gcard.holdem    .gcard-title{color:#f09090}
+
+.gcard-desc{
+  font-family:'Lora',serif;font-style:italic;
+  font-size:clamp(.72rem,2vw,.82rem);
+  color:rgba(240,230,208,.5);line-height:1.5;
+  margin-bottom:1.4rem;min-height:2.5em;
+}
+
+/* Play button */
+.gcard-btn{
+  display:inline-block;padding:.6rem 1.6rem;border-radius:8px;
+  font-family:'Cinzel',serif;font-size:.8rem;font-weight:700;
+  letter-spacing:.1em;transition:all .18s;border:none;cursor:pointer;
+}
+.gcard.bj-casino .gcard-btn{background:linear-gradient(135deg,#1e6b43,#27ae60);color:#fff;box-shadow:0 4px 16px rgba(39,174,96,.35)}
+.gcard.bj-torneo .gcard-btn{background:linear-gradient(135deg,#7a5a1a,#c9a84c);color:#1a0800;box-shadow:0 4px 16px rgba(201,168,76,.35)}
+.gcard.holdem    .gcard-btn{background:linear-gradient(135deg,#922b21,#c0392b);color:#fff;box-shadow:0 4px 16px rgba(192,57,43,.35)}
+
+/* Players badge */
+.players-badge{
+  position:absolute;top:.8rem;right:.8rem;
+  font-size:.6rem;letter-spacing:.1em;
+  padding:3px 8px;border-radius:99px;
+  background:rgba(0,0,0,.4);color:rgba(240,230,208,.5);
+  border:1px solid rgba(255,255,255,.07);
+}
+
+/* Footer */
+.footer{margin-top:2.5rem;text-align:center;font-family:'Lora',serif;font-style:italic;font-size:.72rem;color:rgba(240,230,208,.2)}
+
+@media(max-width:400px){
+  .gcard-inner{padding:1.5rem 1.2rem}
+  .gcard-icon{font-size:2.4rem;margin-bottom:.7rem}
+  .gcard-suit{font-size:5rem}
+}
 </style>
 </head>
 <body>
-
-<!-- LOBBY -->
-<div id="lobby">
-  <h1>♠ Blackjack ♥</h1>
-  <p class="tagline">La suerte favorece a los audaces</p>
-  <div class="lcard">
-    <div><label>Tu nombre</label><input id="name-in" maxlength="16" placeholder="Escribe tu nombre…" autofocus/></div>
-    <div><label style="margin-top:0.8rem;display:block">Fichas iniciales</label>
-      <div class="chips" style="justify-content:center;margin-top:.5rem" id="start-chips">
-        <div class="chip" data-start="100">$100</div>
-        <div class="chip" data-start="500">$500</div>
-        <div class="chip" data-start="1000">$1000</div>
-        <div class="chip" data-start="2000">$2000</div>
-        <div class="chip" data-start="5000">$5000</div>
-        <div class="chip" data-start="10000">$10000</div>
-      </div>
-    </div>
-    <div style="margin-top:.5rem;text-align:center">
-      <span id="selected-start" style="color:var(--gold);font-weight:bold">$1000</span>
-    </div>
-    <div><label style="margin-top:0.8rem;display:block">🎮 Modo de juego</label>
-      <div style="display:flex;gap:1rem;margin-top:.5rem;justify-content:center">
-        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-          <input type="radio" name="gameMode" value="casino" checked> 🎰 Casino (vs Dealer)
-        </label>
-        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-          <input type="radio" name="gameMode" value="tournament"> 🏆 Torneo (Jugadores vs Jugadores)
-        </label>
-      </div>
-      <div id="mode-info" style="font-size:.7rem;color:var(--cream2);margin-top:.5rem;text-align:center">
-        Modo Casino: Ganas si superas al dealer
-      </div>
-    </div>
-    <button class="btn-gold" id="join-btn" style="margin-top:.8rem">Entrar a la Mesa</button>
-    <div id="lobby-err"></div>
-  </div>
+<div class="hdr">
+  <h1>♠ Casino Local ♥</h1>
+  <p>Elige tu juego</p>
 </div>
 
-<!-- TABLE -->
-<div id="table">
-  <header class="bar">
-    <div class="logo">♠ Blackjack</div>
-    <div style="display: flex; gap: 1rem; align-items: center;">
-      <div id="my-balance">Fichas: <span id="bal-val">0</span></div>
-      <button id="exit-btn" class="btn-sm" style="background: rgba(0,0,0,0.4);">🚪 Salir</button>
-    </div>
-  </header>
-  <div id="mode-banner"></div>
-  <div id="phase-banner">Esperando jugadores…</div>
-  <div id="pot-display" style="display:none"></div>
+<div class="grid">
 
-  <!-- Dealer (visible solo en modo casino) -->
-  <div class="felt" id="dealer-felt" style="display:none">
-    <div class="dealer-zone">
-      <div class="zone-lbl">— Dealer —</div>
-      <div class="hand" id="dealer-hand"></div>
-      <div id="dealer-val"></div>
+  <!-- BLACKJACK CASINO -->
+  <a class="gcard bj-casino" href="/blackjack?mode=casino">
+    <div class="players-badge">2–5 jugadores</div>
+    <div class="gcard-suit">♠</div>
+    <div class="gcard-inner">
+      <div class="gcard-icon">🎰</div>
+      <div class="gcard-title">Blackjack Casino</div>
+      <div class="gcard-desc">Tú vs el Dealer. Split, Doble, Seguro, Surrender y apuestas laterales.</div>
+      <button class="gcard-btn">Jugar</button>
     </div>
-  </div>
+  </a>
 
-  <!-- Jugadores -->
-  <div id="players-grid"></div>
-
-  <!-- Seguro (solo casino) -->
-  <div id="insurance-zone">
-    <h3>🛡️ El Dealer muestra una carta fuerte</h3>
-    <p id="ins-text">¿Deseas tomar un seguro contra Blackjack del dealer?</p>
-    <div class="ins-btns">
-      <button class="btn-ins-yes" id="ins-yes">Sí, tomar seguro</button>
-      <button class="btn-ins-no" id="ins-no">No, continuar</button>
+  <!-- BLACKJACK TORNEO -->
+  <a class="gcard bj-torneo" href="/blackjack?mode=tournament">
+    <div class="players-badge">2–5 jugadores</div>
+    <div class="gcard-suit">♦</div>
+    <div class="gcard-inner">
+      <div class="gcard-icon">🏆</div>
+      <div class="gcard-title">Blackjack Torneo</div>
+      <div class="gcard-desc">Jugadores vs Jugadores. El que más puntaje tenga se lleva el pozo.</div>
+      <button class="gcard-btn">Jugar</button>
     </div>
-    <div id="ins-waiting"></div>
-  </div>
+  </a>
 
-  <!-- Apuestas -->
-  <div id="betting-zone">
-    <div>
-      <div class="bet-section-title">Apuesta Principal (mínimo 50)</div>
-      <div class="chips" id="main-chips">
-        <div class="chip" data-v="50" data-t="main">$50</div>
-        <div class="chip" data-v="100" data-t="main">$100</div>
-        <div class="chip" data-v="250" data-t="main">$250</div>
-        <div class="chip" data-v="500" data-t="main">$500</div>
-        <div class="chip" data-v="1000" data-t="main">$1000</div>
-      </div>
-      <div class="bet-row" style="margin-top:.6rem">
-        <button class="btn-sm" id="clear-main">✕</button>
-        <div class="bet-amt" id="main-amt">$0</div>
-        <button class="btn-gold" id="confirm-bet" style="padding:.55rem 1.2rem;font-size:.8rem">Confirmar</button>
-      </div>
+  <!-- TEXAS HOLD'EM -->
+  <a class="gcard holdem" href="/holdem">
+    <div class="players-badge">2–8 jugadores</div>
+    <div class="gcard-suit">♥</div>
+    <div class="gcard-inner">
+      <div class="gcard-icon">♠️</div>
+      <div class="gcard-title">Texas Hold'em</div>
+      <div class="gcard-desc">Poker No-Limit completo. Flop, Turn, River. Blinds, raises y showdown.</div>
+      <button class="gcard-btn">Jugar</button>
     </div>
-    <div style="border-top:1px solid rgba(201,168,76,.15);padding-top:.8rem">
-      <div class="bet-section-title" style="margin-bottom:.6rem">Apuestas Laterales (opcional)</div>
-      <div style="margin-bottom:.7rem">
-        <div style="font-size:.68rem;color:var(--cream2);margin-bottom:.4rem">⭐ <strong style="color:var(--gold)">Perfect Pairs</strong> — ¿Tus 2 cartas forman par?</div>
-        <div class="chips">
-          <div class="chip sm" data-v="5" data-t="pp">$5</div>
-          <div class="chip sm" data-v="10" data-t="pp">$10</div>
-          <div class="chip sm" data-v="25" data-t="pp">$25</div>
-          <div class="chip sm" data-v="50" data-t="pp">$50</div>
-        </div>
-        <div class="bet-row" style="margin-top:.4rem">
-          <button class="btn-sm" id="clear-pp">✕</button>
-          <div class="bet-amt sm" id="pp-amt">$0</div>
-        </div>
-      </div>
-      <!-- 21+3 se elimina en torneo, pero se oculta desde el frontend según modo -->
-      <div id="sidebet-21-3" style="margin-bottom:.7rem">
-        <div style="font-size:.68rem;color:var(--cream2);margin-bottom:.4rem">🎲 <strong style="color:var(--gold)">21+3</strong> — ¿Tus 2 cartas + carta del dealer forman mano de poker?</div>
-        <div class="chips">
-          <div class="chip sm" data-v="5" data-t="s21">$5</div>
-          <div class="chip sm" data-v="10" data-t="s21">$10</div>
-          <div class="chip sm" data-v="25" data-t="s21">$25</div>
-          <div class="chip sm" data-v="50" data-t="s21">$50</div>
-        </div>
-        <div class="bet-row" style="margin-top:.4rem">
-          <button class="btn-sm" id="clear-s21">✕</button>
-          <div class="bet-amt sm" id="s21-amt">$0</div>
-        </div>
-      </div>
-    </div>
-    <div id="waiting-txt"></div>
-  </div>
+  </a>
 
-  <!-- Acciones -->
-  <div id="actions">
-    <button class="btn-act btn-hit" id="btn-hit">Pedir</button>
-    <button class="btn-act btn-stand" id="btn-stand">Plantarse</button>
-    <button class="btn-act btn-double" id="btn-double">×2 Doble</button>
-    <button class="btn-act btn-split" id="btn-split">✂ Split</button>
-    <button class="btn-act btn-surr" id="btn-surr">Rendirse</button>
-  </div>
-
-  <!-- Chat -->
-  <div id="chat-box">
-    <div id="chat-log"></div>
-    <div class="chat-inp">
-      <input id="chat-in" maxlength="120" placeholder="Escribe un mensaje…"/>
-      <button id="chat-send">Enviar</button>
-    </div>
-  </div>
 </div>
 
-<!-- Modal recompra -->
-<div id="rebuy-modal">
-  <div id="rebuy-panel">
-    <h3>💰 Comprar Fichas</h3>
-    <p>Tu saldo actual: <strong id="rebuy-current-bal">$0</strong></p>
-    <div class="bet-section-title" style="margin:.8rem 0 .5rem">Selecciona monto:</div>
-    <div class="chips" id="rebuy-chips" style="justify-content:center">
-      <div class="chip" data-rebuy="100">$100</div>
-      <div class="chip" data-rebuy="500">$500</div>
-      <div class="chip" data-rebuy="1000">$1000</div>
-      <div class="chip" data-rebuy="2000">$2000</div>
-      <div class="chip" data-rebuy="5000">$5000</div>
-      <div class="chip" data-rebuy="10000">$10000</div>
-    </div>
-    <div style="margin:.5rem 0;text-align:center">
-      <span id="rebuy-amount-display" style="color:var(--gold);font-weight:bold">$0</span>
-    </div>
-    <div class="ins-btns" style="margin-top:.5rem">
-      <button class="btn-gold" id="rebuy-confirm">Solicitar Recompra</button>
-      <button class="btn-sm" id="rebuy-cancel">Cancelar</button>
-    </div>
-    <div id="rebuy-err" style="color:#e74c3c;font-size:.75rem;margin-top:.5rem"></div>
-  </div>
-</div>
-
-<!-- Modal votación recompra -->
-<div id="vote-modal">
-  <div id="vote-panel">
-    <h3>🗳️ Votación de Recompra</h3>
-    <p id="vote-player-name"></p>
-    <p id="vote-amount" style="color:var(--gold);font-weight:bold"></p>
-    <p style="font-size:.8rem;margin:.5rem 0">¿Apruebas que este jugador compre fichas?</p>
-    <div class="ins-btns">
-      <button class="btn-ins-yes" id="vote-yes">✅ Aprobar</button>
-      <button class="btn-ins-no" id="vote-no">❌ Rechazar</button>
-    </div>
-    <div id="vote-waiting" style="font-size:.75rem;color:var(--cream2);margin-top:.8rem"></div>
-  </div>
-</div>
-
-<button id="rules-btn">📖 Reglas</button>
-<div id="rules-overlay">
-<div id="rules-panel">
-  <div class="rules-header">
-    <h2>📖 Reglas</h2>
-    <button id="rules-close">✕ Cerrar</button>
-  </div>
-  <details class="rules-section" open><summary>🎯 Objetivo del Juego</summary><div class="rules-body">Llega a <strong>21 puntos</strong> o acércate lo más posible <em>sin pasarte</em>.</div></details>
-  <details class="rules-section"><summary>🃏 Valor de las Cartas</summary><div class="rules-body"><ul><li><strong>2–10:</strong> Valor numérico</li><li><strong>J,Q,K:</strong> 10 puntos</li><li><strong>As:</strong> 11 ó 1</li></ul></div></details>
-  <details class="rules-section"><summary>🛡️ Seguro</summary><div class="rules-body">En modo Casino, si el dealer muestra un <strong>As, 10, J, Q o K</strong>, puedes contratar seguro (mitad de tu apuesta). Si el dealer tiene Blackjack, el seguro paga 2:1.</div></details>
-  <details class="rules-section"><summary>🏆 Modo Torneo</summary><div class="rules-body">Los jugadores compiten entre sí. El dealer solo reparte. Las apuestas se acumulan en un pozo y se reparten según el ranking: <strong>1º 50%, 2º 30%, 3º 20%</strong> (ajustado según número de jugadores). Apuesta mínima 50 fichas. Segunda carta inicial oculta hasta el final. Si todos se pasan, el pozo se acumula para la siguiente ronda.</div></details>
-</div>
-</div>
-<div id="toast"></div>
-
-<script>
-// ==================== ESTADO LOCAL ====================
-let ws, myId, gameState = null;
-let bets = { main: 0, pp: 0, s21: 0 };
-let selectedStartAmount = 1000;
-let rebuyAmount = 0;
-
-function rankVal(rank) {
-  if (rank === 'A') return 11;
-  if (['J','Q','K'].includes(rank)) return 10;
-  return parseInt(rank);
-}
-function handValue(cards) {
-  let t = 0, a = 0;
-  for (const c of cards) { t += rankVal(c.rank); if (c.rank==='A') a++; }
-  while (t > 21 && a > 0) { t -= 10; a--; }
-  return t;
-}
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function cardHTML(c, sm = false, hiddenForOthers = false, isMine = false) {
-  if (c.hidden && !isMine) return `<div class="card back ${sm?'sm':''}"></div>`;
-  if (c.suit === '?') return `<div class="card back ${sm?'sm':''}"></div>`;
-  const red = c.suit==='♥'||c.suit==='♦';
-  return `<div class="card ${red?'red':'black'} ${sm?'sm':''}">
-    <div class="cr">${esc(c.rank)}</div><div class="cs">${esc(c.suit)}</div>
-  </div>`;
-}
-function handHTML(cards, sm = false, isMine = false) {
-  return cards.map(c => cardHTML(c, sm, c.hidden, isMine)).join('');
-}
-
-const PHASES = {
-  lobby: 'Esperando jugadores…',
-  betting: '— Fase de Apuestas — Haz tu apuesta',
-  insurance: '🛡️ Seguro — El dealer muestra una carta fuerte',
-  playing: 'Ronda en Curso',
-  dealer: 'Turno del Dealer',
-  results: '— Resultados —',
-};
-const STATUS_LABEL = {
-  bust:'BUST', win:'GANÓ', lose:'PERDIÓ', push:'EMPATE',
-  'blackjack-win':'BLACKJACK!', blackjack:'BLACKJACK',
-  surrender:'RENDIDO', stand:'', playing:'',
-};
-const STATUS_CLASS = {
-  bust:'hs-bust', win:'hs-win', lose:'hs-lose', push:'hs-push',
-  'blackjack-win':'hs-win', blackjack:'hs-blackjack',
-  surrender:'hs-surrender',
-};
-
-function render(s) {
-  if (!s) return;
-  document.getElementById('phase-banner').textContent = PHASES[s.phase] || s.phase;
-  const modeBanner = document.getElementById('mode-banner');
-  const isTournament = s.gameMode === 'tournament';
-  if (modeBanner) {
-    modeBanner.textContent = isTournament ? '🏆 MODO TORNEO - Jugadores vs Jugadores | Apuesta mínima 50 | Segunda carta oculta' : '🎰 Modo Casino: Gana contra el dealer';
-    modeBanner.style.background = isTournament ? 'rgba(201,168,76,.2)' : 'rgba(0,0,0,.3)';
-  }
-  // Mostrar/ocultar dealer y pozo
-  const dealerFelt = document.getElementById('dealer-felt');
-  const potDisplay = document.getElementById('pot-display');
-  if (isTournament) {
-    dealerFelt.style.display = 'none';
-    potDisplay.style.display = 'block';
-    if (s.potTotal !== undefined) potDisplay.textContent = `💰 POZO ACUMULADO: $${s.potTotal}`;
-    // Ocultar apuesta 21+3
-    document.getElementById('sidebet-21-3').style.display = 'none';
-  } else {
-    dealerFelt.style.display = 'block';
-    potDisplay.style.display = 'none';
-    document.getElementById('sidebet-21-3').style.display = 'block';
-  }
-
-  const me = s.players[myId];
-  if (me) document.getElementById('bal-val').textContent = me.balance;
-
-  // Dealer (solo casino)
-  const dh = document.getElementById('dealer-hand');
-  const dv = document.getElementById('dealer-val');
-  if (!isTournament) {
-    dh.innerHTML = handHTML(s.dealer.hand);
-    dv.textContent = s.dealer.value != null ? `Valor: ${s.dealer.value}` : '';
-  } else {
-    dh.innerHTML = '';
-    dv.textContent = '';
-  }
-
-  const grid = document.getElementById('players-grid');
-  grid.innerHTML = '';
-  for (const id of s.order) {
-    const p = s.players[id];
-    if (!p) continue;
-    const isMe = id === myId;
-    const isTurn = id === s.currentPlayerId && s.phase === 'playing';
-    const el = document.createElement('div');
-    el.className = `player-card${isTurn?' is-turn':''}${isMe?' is-me':''}`;
-    let sbHtml = '';
-    // En torneo, mostrar resultados laterales solo al propio jugador o al final (fase results)
-    const showSideBets = !isTournament || s.phase === 'results' || isMe;
-    if (p.resultPP && showSideBets) { const r = p.resultPP; const win = r.win > 0; sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'⭐':'✗'} PP: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`; }
-    if (p.result21_3 && !isTournament && showSideBets) { const r = p.result21_3; const win = r.win > 0; sbHtml += `<div class="sb-badge ${win?'win':'lose'}">${win?'🎲':'✗'} 21+3: ${r.label} ${win?'+$'+r.win:'-$'+Math.abs(r.win)}</div>`; }
-    let handsHtml = '';
-    if (p.hands && p.hands.length > 0) {
-      p.hands.forEach((hand, hIdx) => {
-        const isActive = isTurn && isMe && hIdx === s.currentHandIdx;
-        const hv = handValue(hand.cards);
-        const sl = STATUS_LABEL[hand.status] || '';
-        const sc = STATUS_CLASS[hand.status] || '';
-        const doubled = hand.doubled ? ' ×2' : '';
-        const splitTag = hand.fromSplit ? ' (Split)' : '';
-        const showStats = !isTournament || s.phase === 'results' || isMe;
-        const displayValue = showStats ? hv : '??';
-        const displayStatus = showStats ? sl : '';
-        handsHtml += `<div class="hand-box${isActive?' active-h':''}"><div class="hand-meta">${p.hands.length > 1 ? `<span style="font-size:.6rem;color:var(--cream2)">Mano ${hIdx+1}${splitTag}</span>` : ''}${hand.bet > 0 ? `<span class="hand-bet-tag">$${hand.bet}${doubled}</span>` : ''}${hand.cards.length > 0 ? `<span class="hand-val">${displayValue}</span>` : ''}${displayStatus ? `<span class="hand-status ${sc}">${displayStatus}</span>` : ''}</div><div class="hand" style="justify-content:flex-start">${handHTML(hand.cards, true, isMe)}</div></div>`;
-      });
-    } else if (p.status === 'ready') { handsHtml = `<div style="font-size:.68rem;color:var(--gold);opacity:.7;padding:.3rem 0">Listo ✓</div>`; } else { handsHtml = `<div style="font-size:.68rem;color:var(--cream2);opacity:.5;padding:.3rem 0">Esperando…</div>`; }
-    el.innerHTML = `<div class="p-head"><span class="p-name">${esc(p.name)}${isMe?'<span class="you-tag">Tú</span>':''}</span><span class="p-bal">$${p.balance}</span></div>${sbHtml ? `<div class="sb-badges">${sbHtml}</div>` : ''}<div class="hands-wrap">${handsHtml}</div>`;
-    grid.appendChild(el);
-  }
-
-  // Seguro solo casino
-  const insZone = document.getElementById('insurance-zone');
-  if (!isTournament && s.phase === 'insurance' && me && !me.insuranceDecided) {
-    insZone.classList.add('active');
-    const mainBet = me.hands[0]?.bet || 0;
-    document.getElementById('ins-text').textContent = `¿Apostar $${Math.ceil(mainBet/2)} a que el dealer tiene Blackjack? (paga 2:1)`;
-    document.getElementById('ins-waiting').textContent = '';
-    document.getElementById('ins-yes').style.display = '';
-    document.getElementById('ins-no').style.display = '';
-  } else if (!isTournament && s.phase === 'insurance' && me && me.insuranceDecided) {
-    insZone.classList.add('active');
-    document.getElementById('ins-text').textContent = 'Decisión registrada.';
-    document.getElementById('ins-waiting').textContent = 'Esperando a los demás jugadores…';
-    document.getElementById('ins-yes').style.display = 'none';
-    document.getElementById('ins-no').style.display = 'none';
-  } else { insZone.classList.remove('active'); }
-
-  const bz = document.getElementById('betting-zone');
-  const canBet = (s.phase === 'betting' || s.phase === 'lobby') && me && me.status !== 'ready';
-  const alreadyBet = me && me.status === 'ready';
-  if ((s.phase === 'betting' || s.phase === 'lobby') && me) {
-    bz.classList.add('active');
-    const locked = alreadyBet;
-    bz.querySelectorAll('.chip, #confirm-bet').forEach(el => el.style.pointerEvents = locked ? 'none' : '');
-    bz.querySelectorAll('.chip').forEach(el => el.style.opacity = locked ? '.45' : '1');
-    document.getElementById('waiting-txt').textContent = locked ? 'Apuesta registrada. Esperando a los demás…' : '';
-    document.getElementById('confirm-bet').style.opacity = locked ? '.4' : '1';
-  } else { bz.classList.remove('active'); if (!canBet) { bets = { main:0, pp:0, s21:0 }; updateBetUI(); } }
-
-  const actions = document.getElementById('actions');
-  const myTurn = s.phase === 'playing' && s.currentPlayerId === myId && me;
-  if (myTurn) {
-    actions.style.display = 'flex';
-    const hand = me.hands[s.currentHandIdx];
-    if (hand) {
-      const can2 = hand.cards.length === 2 && me.balance >= hand.bet;
-      const sameVal = hand.cards.length === 2 && rankVal(hand.cards[0].rank) === rankVal(hand.cards[1].rank);
-      const canSp = sameVal && me.balance >= hand.bet && me.hands.length < 4;
-      const canSurr = hand.cards.length === 2 && !hand.fromSplit && me.hands.length === 1;
-      document.getElementById('btn-double').disabled = !can2;
-      document.getElementById('btn-split').disabled = !canSp;
-      document.getElementById('btn-surr').disabled = !canSurr;
-    }
-  } else { actions.style.display = 'none'; }
-
-  // Resultados en chat (solo casino)
-  if (s.phase === 'results' && me && me.hands[0] && !isTournament) {
-    const mainHand = me.hands[0];
-    const msgs = {
-      'blackjack-win': '🃏 ¡BLACKJACK! +' + Math.floor(mainHand.bet * 1.5),
-      win: '🎉 ¡Ganaste! +$' + mainHand.bet,
-      lose: '😢 Perdiste -$' + mainHand.bet,
-      push: '🤝 Empate — apuesta devuelta',
-      bust: '💥 Te pasaste de 21',
-      surrender: '🏳 Te rendiste — recuperas $' + Math.floor(mainHand.bet/2),
-    };
-    if (msgs[mainHand.status]) showToast(msgs[mainHand.status]);
-  }
-}
-
-function updateBetUI() {
-  document.getElementById('main-amt').textContent = '$' + bets.main;
-  document.getElementById('pp-amt').textContent = '$' + bets.pp;
-  document.getElementById('s21-amt').textContent = '$' + bets.s21;
-}
-document.querySelectorAll('.chip[data-v]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    const v = parseInt(chip.dataset.v);
-    const t = chip.dataset.t;
-    const me = gameState?.players[myId];
-    if (!me) return;
-    const total = bets.main + bets.pp + bets.s21 + v;
-    if (total > me.balance) { showToast('No tienes suficientes fichas'); return; }
-    bets[t] = (bets[t] || 0) + v;
-    updateBetUI();
-  });
-});
-document.getElementById('clear-main')?.addEventListener('click', () => { bets.main = 0; updateBetUI(); });
-document.getElementById('clear-pp')?.addEventListener('click', () => { bets.pp = 0; updateBetUI(); });
-document.getElementById('clear-s21')?.addEventListener('click', () => { bets.s21 = 0; updateBetUI(); });
-document.getElementById('confirm-bet')?.addEventListener('click', () => {
-  if (bets.main < 50) { showToast('La apuesta principal mínima es 50'); return; }
-  ws.send(JSON.stringify({ type:'bet', main:bets.main, pp:bets.pp, s21:bets.s21 }));
-  bets = { main:0, pp:0, s21:0 }; updateBetUI();
-});
-
-document.getElementById('ins-yes')?.addEventListener('click', () => ws.send(JSON.stringify({type:'insurance',take:true})));
-document.getElementById('ins-no')?.addEventListener('click', () => ws.send(JSON.stringify({type:'insurance',take:false})));
-document.getElementById('btn-hit')?.addEventListener('click', () => ws.send(JSON.stringify({type:'hit'})));
-document.getElementById('btn-stand')?.addEventListener('click', () => ws.send(JSON.stringify({type:'stand'})));
-document.getElementById('btn-double')?.addEventListener('click', () => ws.send(JSON.stringify({type:'double'})));
-document.getElementById('btn-split')?.addEventListener('click', () => ws.send(JSON.stringify({type:'split'})));
-document.getElementById('btn-surr')?.addEventListener('click', () => ws.send(JSON.stringify({type:'surrender'})));
-
-function addChat(text, sys) {
-  const log = document.getElementById('chat-log');
-  const d = document.createElement('div');
-  d.className = 'cm' + (sys ? ' sys' : '');
-  d.textContent = text;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
-}
-function sendChat() {
-  const inp = document.getElementById('chat-in');
-  const t = inp.value.trim();
-  if (!t || !ws) return;
-  ws.send(JSON.stringify({type:'chat',text:t}));
-  inp.value = '';
-}
-document.getElementById('chat-send')?.addEventListener('click', sendChat);
-document.getElementById('chat-in')?.addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
-
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
-}
-
-document.getElementById('rules-btn')?.addEventListener('click', () => document.getElementById('rules-overlay').classList.add('open'));
-document.getElementById('rules-close')?.addEventListener('click', () => document.getElementById('rules-overlay').classList.remove('open'));
-document.getElementById('rules-overlay')?.addEventListener('click', e => { if (e.target === document.getElementById('rules-overlay')) document.getElementById('rules-overlay').classList.remove('open'); });
-
-document.querySelectorAll('#start-chips .chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('#start-chips .chip').forEach(c => c.style.opacity = '0.6');
-    chip.style.opacity = '1';
-    selectedStartAmount = parseInt(chip.dataset.start);
-    document.getElementById('selected-start').textContent = `$${selectedStartAmount}`;
-  });
-});
-document.querySelector('#start-chips .chip[data-start="1000"]').style.opacity = '1';
-
-const modeInfo = {
-  casino: '🎰 Modo Casino: Ganas si tu mano supera al dealer. Seguro con As, 10, J, Q, K.',
-  tournament: '🏆 Modo Torneo: Compites contra otros jugadores. Apuesta mínima 50. Segunda carta oculta. Premios: 1º 50%, 2º 30%, 3º 20% del pozo. Si todos se pasan, el pozo se acumula.'
-};
-document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
-  radio.addEventListener('change', (e) => {
-    const infoDiv = document.getElementById('mode-info');
-    if (infoDiv) infoDiv.textContent = modeInfo[e.target.value];
-  });
-});
-
-// Recompra con votación
-function initRebuyUI() {
-  const rebuyChips = document.querySelectorAll('#rebuy-chips .chip');
-  rebuyChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      rebuyChips.forEach(c => c.style.opacity = '0.6');
-      chip.style.opacity = '1';
-      rebuyAmount = parseInt(chip.dataset.rebuy);
-      document.getElementById('rebuy-amount-display').textContent = `$${rebuyAmount}`;
-      document.getElementById('rebuy-err').textContent = '';
-    });
-  });
-  document.getElementById('rebuy-confirm')?.addEventListener('click', () => {
-    if (rebuyAmount < 100) { document.getElementById('rebuy-err').textContent = 'Selecciona un monto'; return; }
-    ws.send(JSON.stringify({ type: 'rebuy_request', amount: rebuyAmount }));
-    document.getElementById('rebuy-modal').classList.remove('open');
-    rebuyAmount = 0;
-    document.getElementById('rebuy-amount-display').textContent = '$0';
-    rebuyChips.forEach(c => c.style.opacity = '0.6');
-    showToast('Solicitud enviada. Esperando votación...');
-  });
-  document.getElementById('rebuy-cancel')?.addEventListener('click', () => {
-    document.getElementById('rebuy-modal').classList.remove('open');
-  });
-}
-const rebuyBtn = document.createElement('button');
-rebuyBtn.textContent = '💰 Comprar Fichas';
-rebuyBtn.className = 'btn-sm';
-rebuyBtn.style.marginLeft = 'auto';
-rebuyBtn.style.marginRight = '1rem';
-rebuyBtn.addEventListener('click', () => {
-  if (gameState && (gameState.phase === 'betting' || gameState.phase === 'lobby')) {
-    const currentBal = gameState.players[myId]?.balance || 0;
-    document.getElementById('rebuy-current-bal').textContent = `$${currentBal}`;
-    document.getElementById('rebuy-modal').classList.add('open');
-  } else { showToast('Solo puedes comprar fichas entre rondas'); }
-});
-
-// Votación
-function initVoteUI() {
-  document.getElementById('vote-yes')?.addEventListener('click', () => {
-    ws.send(JSON.stringify({ type: 'rebuy_vote', approve: true }));
-    document.getElementById('vote-modal').classList.remove('open');
-  });
-  document.getElementById('vote-no')?.addEventListener('click', () => {
-    ws.send(JSON.stringify({ type: 'rebuy_vote', approve: false }));
-    document.getElementById('vote-modal').classList.remove('open');
-  });
-}
-function handleVoteRequest(data) {
-  document.getElementById('vote-player-name').textContent = `${data.playerName} quiere comprar $${data.amount} fichas`;
-  document.getElementById('vote-amount').textContent = `$${data.amount}`;
-  document.getElementById('vote-waiting').textContent = '';
-  document.getElementById('vote-modal').classList.add('open');
-}
-
-function connect(name, startAmount, gameMode) {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = () => { ws.send(JSON.stringify({type:'join', name, startAmount, gameMode})); };
-  ws.onmessage = e => {
-    const msg = JSON.parse(e.data);
-    if (msg.type === 'joined') {
-      myId = msg.id;
-      document.getElementById('lobby').style.display = 'none';
-      document.getElementById('table').style.display = 'block';
-      const barHeader = document.querySelector('.bar');
-      if (barHeader && !document.querySelector('.rebuy-btn-added')) {
-        rebuyBtn.classList.add('rebuy-btn-added');
-        barHeader.appendChild(rebuyBtn);
-      }
-    } else if (msg.type === 'state') {
-      gameState = msg.state; render(msg.state);
-    } else if (msg.type === 'chat') {
-      addChat(msg.text, msg.system);
-    } else if (msg.type === 'error') {
-      document.getElementById('lobby-err').textContent = msg.text;
-      document.getElementById('join-btn').disabled = false;
-    } else if (msg.type === 'rebuy_vote_request') {
-      handleVoteRequest(msg);
-    } else if (msg.type === 'rebuy_complete') {
-      showToast(`✅ Recompra exitosa! +$${msg.amount}`);
-    } else if (msg.type === 'rebuy_denied') {
-      showToast(`❌ Tu solicitud de recompra fue rechazada`);
-    } else if (msg.type === 'rebuy_vote_closed') {
-      if (!msg.approved) showToast(`La votación de recompra terminó sin aprobación`);
-    } else if (msg.type === 'tournament_results') {
-      let resultText = `🏆 RESULTADOS DEL TORNEO 🏆\n`;
-      if (msg.noWinner) {
-        resultText = `💀 ¡Todos los jugadores se pasaron de 21! El pozo de $${msg.potCarry} se acumula para la próxima ronda.`;
-      } else {
-        msg.results.forEach((r, idx) => {
-          resultText += `${idx+1}. ${r.name} - Gana $${r.win}\n`;
-        });
-      }
-      alert(resultText);
-      addChat(resultText.replace(/\n/g, ' · '), true);
-    }
-  };
-  ws.onclose = () => showToast('Desconectado — recarga la página');
-}
-function tryJoin() {
-  const name = document.getElementById('name-in').value.trim();
-  if (!name) { document.getElementById('lobby-err').textContent = 'Escribe tu nombre'; return; }
-  const gameMode = document.querySelector('input[name="gameMode"]:checked').value;
-  document.getElementById('join-btn').disabled = true;
-  document.getElementById('lobby-err').textContent = '';
-  connect(name, selectedStartAmount, gameMode);
-}
-document.getElementById('join-btn')?.addEventListener('click', tryJoin);
-document.getElementById('name-in')?.addEventListener('keydown', e => { if (e.key==='Enter') tryJoin(); });
-initRebuyUI();
-initVoteUI();
-document.getElementById('exit-btn')?.addEventListener('click', () => {
-  if (ws) ws.close();
-  window.location.reload();
-});
-</script>
+<div class="footer">Servidor local — todos en la misma red WiFi</div>
 </body>
 </html>
